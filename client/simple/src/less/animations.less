@@ -19,3 +19,25 @@
 input.checkbox-onoff[type="checkbox"]::before {
   transition: left 0.25s;
 }
+
+@keyframes ai-overview-shimmer {
+  0% {
+    background-position: -37.5rem 0;
+  }
+
+  100% {
+    background-position: 37.5rem 0;
+  }
+}
+
+@keyframes ai-overview-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}

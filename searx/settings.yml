@@ -249,6 +249,32 @@ plugins:
   searx.plugins.tracker_url_remover.SXNGPlugin:
     active: true
 
+  searx.plugins.ai_overview.SXNGPlugin:
+    active: false
+
+
+# Configuration of the "AI overview" plugin: it is only shown as an option in
+# the preferences (and can only be activated by a user) once both 'base_url'
+# and 'model' are set here.  The query and the top results are sent to this
+# API, so only point it at a provider/instance you trust.
+#
+# ai_overview:
+#   # Base URL of an OpenAI compatible API, without the trailing
+#   # "/chat/completions" (e.g. an OpenAI-compatible cloud provider, or a
+#   # self-hosted server such as Ollama / vLLM / LM Studio / llama.cpp).
+#   base_url: "https://api.openai.com/v1"
+#   # API key; can also be set with the SEARXNG_AI_OVERVIEW_API_KEY
+#   # environment variable instead (recommended, so it isn't committed here).
+#   api_key: ""
+#   model: "gpt-4o-mini"
+#   # Number of top results sent to the model as context (max 8).
+#   num_results: 5
+#   max_tokens: 500
+#   # Seconds to wait for the API before giving up.
+#   timeout: 20
+#   # Uncomment to override the default system prompt.
+#   # system_prompt: "..."
+
 
 # Configuration of the "Hostnames plugin":
 #

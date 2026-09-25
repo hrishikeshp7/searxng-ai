@@ -66,7 +66,7 @@
   /// Results Colors
   --color-result-background: #fff;
   --color-result-border: #ddd;
-  --color-result-url-font: #000;
+  --color-result-url-font: #4b5563;
   --color-result-vim-selected: #f7f7f7;
   --color-result-vim-arrow: #000bbb;
   --color-result-description-highlight-font: #000;
@@ -132,6 +132,12 @@
   // Favicons Colors
   --color-favicon-background-color: #ddd;
   --color-favicon-border-color: #ccc;
+  /// AI overview colors
+  --color-ai-overview-accent: #7c4dff;
+  --color-ai-overview-accent-rgb: 124, 77, 255;
+  --color-ai-overview-background: #faf9ff;
+  --color-ai-overview-border: #e7e1ff;
+  --color-ai-overview-skeleton: #ece6ff;
 }
 
 .dark-themes() {
@@ -193,7 +199,7 @@
   /// Results Colors
   --color-result-background: #26292f;
   --color-result-border: #333;
-  --color-result-url-font: #fff;
+  --color-result-url-font: #9aa4b2;
   --color-result-vim-selected: #1f1f23cc;
   --color-result-vim-arrow: #8af;
   --color-result-description-highlight-font: #fff;
@@ -251,6 +257,12 @@
   // Favicons Colors
   --color-favicon-background-color: #ddd;
   --color-favicon-border-color: #ccc;
+  /// AI overview colors
+  --color-ai-overview-accent: #b09aff;
+  --color-ai-overview-accent-rgb: 176, 154, 255;
+  --color-ai-overview-background: #26242f;
+  --color-ai-overview-border: #3c3650;
+  --color-ai-overview-skeleton: #35304a;
 }
 
 .black-themes() {
@@ -277,6 +289,15 @@
   .dark-themes();
   .black-themes();
 }
+
+/// Typography
+// system-font stack: no webfont download, so every visitor gets their
+// platform's native UI font instead of the browser's generic serif/sans
+// fallback (and, unlike Google Fonts, nothing is fetched from a third party).
+@font-family-base: -apple-system, blinkmacsystemfont, "Segoe UI", roboto,
+  "Helvetica Neue", arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+@font-family-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono",
+  consolas, monospace;
 
 /// General Size
 @results-width: 45rem;

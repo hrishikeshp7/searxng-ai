@@ -1,0 +1,53 @@
+# Settings overlay used only for the Heroku deployment, via
+# SEARXNG_SETTINGS_PATH=/app/heroku_settings.yml (set in the Procfile /
+# Heroku config vars). It layers on top of searx/settings.yml's defaults
+# (use_default_settings: true) and mirrors that file's `plugins:` section
+# exactly, except ai_overview is turned on so the feature works out of the
+# box on this deployment.
+#
+# The provider itself (base_url / model / api_key) is supplied through
+# SEARXNG_AI_OVERVIEW_* Heroku config vars, never committed here.
+#
+# server.secret_key is also required for the ai_overview plugin to activate;
+# it is likewise supplied via the SEARXNG_SECRET config var (see
+# searx/settings_defaults.py), not set here.
+
+use_default_settings: true
+
+plugins:
+
+  searx.plugins.calculator.SXNGPlugin:
+    active: true
+
+  searx.plugins.infinite_scroll.SXNGPlugin:
+    active: false
+
+  searx.plugins.hash_plugin.SXNGPlugin:
+    active: true
+
+  searx.plugins.self_info.SXNGPlugin:
+    active: true
+
+  searx.plugins.unit_converter.SXNGPlugin:
+    active: true
+
+  searx.plugins.ahmia_filter.SXNGPlugin:
+    active: true
+
+  searx.plugins.hostnames.SXNGPlugin:
+    active: true
+
+  searx.plugins.time_zone.SXNGPlugin:
+    active: true
+
+  searx.plugins.oa_doi_rewrite.SXNGPlugin:
+    active: false
+
+  searx.plugins.tor_check.SXNGPlugin:
+    active: false
+
+  searx.plugins.tracker_url_remover.SXNGPlugin:
+    active: true
+
+  searx.plugins.ai_overview.SXNGPlugin:
+    active: true

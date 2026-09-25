@@ -67,6 +67,7 @@ const simple_icons: IconSet[] = [
       search: "search-outline.svg",
       seeder: "swap-vertical.svg",
       settings: "settings-outline.svg",
+      sparkles: "sparkles-outline.svg",
       tv: "tv-outline.svg",
       videocam: "videocam-outline.svg"
     },

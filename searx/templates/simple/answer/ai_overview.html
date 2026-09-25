@@ -1,0 +1,13 @@
+{% from 'simple/icons.html' import icon_small %}
+<div class="ai-overview" data-ai-overview data-url="{{ url_for('ai_overview') }}" data-payload="{{ answer.payload }}" data-sig="{{ answer.sig }}">
+  <h5>{{ icon_small('sparkles') }} {{ _('AI overview') }}</h5>
+  <div class="ai-overview-content ai-overview-loading" aria-live="polite" aria-busy="true">
+    <span class="sr-only">{{ _('Generating AI overview…') }}</span>
+    <div class="ai-overview-skeleton" aria-hidden="true">
+      <div class="ai-overview-skeleton-line"></div>
+      <div class="ai-overview-skeleton-line"></div>
+      <div class="ai-overview-skeleton-line short"></div>
+    </div>
+  </div>
+  <p class="ai-overview-disclaimer">{{ _('AI-generated overview, may be inaccurate.') }}</p>
+</div>

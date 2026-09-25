@@ -34,6 +34,13 @@ ready(() => {
       where: [Endpoints.results]
     });
   }
+
+  if (settings.plugins?.includes("ai_overview")) {
+    load(() => import("./plugin/AiOverview.ts").then(({ default: Plugin }) => new Plugin()), {
+      on: "endpoint",
+      where: [Endpoints.results]
+    });
+  }
 });
 
 ready(

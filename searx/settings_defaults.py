@@ -269,4 +269,16 @@ SCHEMA: dict[str, t.Any] = {
     'categories_as_tabs': SettingsValue(dict, CATEGORIES_AS_TABS),
     'engines': SettingsValue(list, []),
     'doi_resolvers': {},
+    'ai_overview': {
+        # Base URL of an OpenAI compatible API (without the trailing
+        # ``/chat/completions``), e.g. ``https://api.openai.com/v1`` or a
+        # self-hosted server such as Ollama / vLLM / LM Studio.
+        'base_url': SettingsValue(str, '', 'SEARXNG_AI_OVERVIEW_BASE_URL'),
+        'api_key': SettingsValue(str, '', 'SEARXNG_AI_OVERVIEW_API_KEY'),
+        'model': SettingsValue(str, '', 'SEARXNG_AI_OVERVIEW_MODEL'),
+        'system_prompt': SettingsValue(str, ''),
+        'num_results': SettingsValue(int, 5),
+        'max_tokens': SettingsValue(int, 500),
+        'timeout': SettingsValue(numbers.Real, 20),
+    },
 }

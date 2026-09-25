@@ -23,6 +23,7 @@
       "src/js/plugin/MapView.ts",
       "src/js/plugin/InfiniteScroll.ts",
       "src/js/plugin/Calculator.ts",
+      "src/js/plugin/AiOverview.ts",
       "src/js/main/keyboard.ts",
       "src/js/main/search.ts",
       "src/js/main/autocomplete.ts",
@@ -78,6 +79,16 @@
     "imports": [
       "src/js/index.ts",
       "_DcK-mo-Y.min.js"
+    ]
+  },
+  "src/js/plugin/AiOverview.ts": {
+    "file": "chunk/fTNGAOIe.min.js",
+    "name": "aioverview",
+    "src": "src/js/plugin/AiOverview.ts",
+    "isDynamicEntry": true,
+    "imports": [
+      "_BuurKv-k.min.js",
+      "src/js/index.ts"
     ]
   },
   "src/js/plugin/Calculator.ts": {

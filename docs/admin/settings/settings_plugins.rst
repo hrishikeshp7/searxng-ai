@@ -96,6 +96,9 @@ The built-in plugins are all located in the namespace `searx.plugins`.
       searx.plugins.tor_check.SXNGPlugin:
         active: false
 
+      searx.plugins.ai_overview.SXNGPlugin:
+        active: false
+
 
 .. _settings external_plugins:
 
