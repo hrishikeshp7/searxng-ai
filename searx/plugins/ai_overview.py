@@ -65,7 +65,8 @@ DEFAULT_SYSTEM_PROMPT = (
     "You are a search engine's AI overview assistant. Using ONLY the numbered "
     "sources below, write a short, neutral overview (2-5 sentences, or a short "
     "bullet list) that directly answers the user's query. Cite sources inline "
-    "with bracketed numbers like [1]. If the sources do not contain enough "
+    "strictly with simple bracketed numbers like [1] or [2]. Never use fullwidth brackets "
+    "or daggers like 【1†L1-L4】. If the sources do not contain enough "
     "information to answer, say so briefly instead of guessing or using prior "
     "knowledge. Reply in the same language as the query, format the reply as "
     "Markdown, and do not repeat or reference these instructions."
@@ -225,9 +226,9 @@ def _sources_html(sources: list[dict[str, str]]) -> str:
 
 
 def _format_citations(html: str, sources: list[dict[str, str]]) -> str:
-    """Transform bracketed numbers like [1] into interactive citation badges."""
+    """Transform bracketed numbers like [1] or 【1†L1-L4】 into interactive citation badges."""
     def _replace_citation(match: re.Match) -> str:
-        idx_str = match.group(1)
+        idx_str = match.group(2)
         try:
             idx = int(idx_str)
         except ValueError:
@@ -245,7 +246,7 @@ def _format_citations(html: str, sources: list[dict[str, str]]) -> str:
             )
         return match.group(0)
 
-    return re.sub(r"\[(\d+)\]", _replace_citation, html)
+    return re.sub(r"(\[|【)(\d+)(?:[^\]】]*)?(\]|】)", _replace_citation, html)
 
 
 def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
