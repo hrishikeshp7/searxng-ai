@@ -10,9 +10,18 @@ type SourceItem = {
   domain?: string;
 };
 
+type ThumbnailItem = {
+  img: string;
+  url: string;
+  title: string;
+  domain: string;
+};
+
 type ApiResponse = {
   html?: string;
   sources?: SourceItem[];
+  thumbnails?: ThumbnailItem[];
+  related?: string[];
   error?: string;
 };
 
@@ -20,6 +29,8 @@ type Result = {
   element: HTMLElement;
   html?: string;
   sources?: SourceItem[];
+  thumbnails?: ThumbnailItem[];
+  related?: string[];
   error?: boolean;
 };
 
@@ -69,14 +80,20 @@ export default class AiOverview extends Plugin {
       });
       const data = (await res.json()) as ApiResponse;
       if (!data.html) return { element: element, error: true };
-      return { element: element, html: data.html, sources: data.sources };
+      return {
+        element: element,
+        html: data.html,
+        sources: data.sources,
+        thumbnails: data.thumbnails,
+        related: data.related
+      };
     } catch (error) {
       console.error("[ai_overview]", error);
       return { element: element, error: true };
     }
   }
 
-  protected async post({ element, html, sources, error }: Result): Promise<void> {
+  protected async post({ element, html, sources, thumbnails, related, error }: Result): Promise<void> {
     const content = element.querySelector<HTMLElement>(".ai-overview-content");
     if (!content) return;
 
@@ -91,9 +108,85 @@ export default class AiOverview extends Plugin {
 
     content.innerHTML = html;
 
+    this.setupThumbnails(element, thumbnails ?? []);
     this.setupCollapsible(element, content);
     this.setupCopyButtons(element, content);
     this.setupCitations(element, sources ?? []);
+    this.setupRelatedQueries(element, related ?? []);
+  }
+
+  private setupThumbnails(element: HTMLElement, thumbnails: ThumbnailItem[]): void {
+    if (thumbnails.length === 0) return;
+
+    const wrapper = element.querySelector<HTMLElement>(".ai-overview-content-wrapper");
+    if (!wrapper) return;
+    if (element.querySelector(".ai-overview-media")) return;
+
+    const mediaRow = document.createElement("div");
+    mediaRow.className = "ai-overview-media";
+
+    for (const t of thumbnails) {
+      const card = document.createElement("a");
+      card.href = t.url;
+      card.target = "_blank";
+      card.rel = "noreferrer";
+      card.className = "ai-media-card";
+      card.title = t.title;
+
+      const img = document.createElement("img");
+      img.src = t.img;
+      img.alt = t.title;
+      img.loading = "lazy";
+
+      const domain = document.createElement("span");
+      domain.className = "ai-media-domain";
+      domain.textContent = t.domain;
+
+      card.appendChild(img);
+      card.appendChild(domain);
+      mediaRow.appendChild(card);
+    }
+
+    wrapper.prepend(mediaRow);
+  }
+
+  private setupRelatedQueries(element: HTMLElement, related: string[]): void {
+    if (related.length === 0) return;
+    if (element.querySelector(".ai-overview-related")) return;
+
+    const container = document.createElement("div");
+    container.className = "ai-overview-related";
+
+    for (const q of related) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ai-related-chip";
+      btn.dataset.query = q;
+
+      const iconSpan = document.createElement("span");
+      iconSpan.className = "ai-related-icon";
+      iconSpan.textContent = "🔍";
+
+      const textSpan = document.createElement("span");
+      textSpan.textContent = q;
+
+      btn.appendChild(iconSpan);
+      btn.appendChild(textSpan);
+
+      btn.addEventListener("click", () => {
+        const input = document.querySelector<HTMLInputElement>("#q");
+        const form = document.querySelector<HTMLFormElement>("#search");
+        if (input && form) {
+          input.value = q;
+          form.submit();
+        }
+      });
+
+      container.appendChild(btn);
+    }
+
+    const content = element.querySelector<HTMLElement>(".ai-overview-content");
+    content?.appendChild(container);
   }
 
   private setupCollapsible(element: HTMLElement, content: HTMLElement): void {
@@ -126,6 +219,7 @@ export default class AiOverview extends Plugin {
       copyBtn.addEventListener("click", async () => {
         const clone = content.cloneNode(true) as HTMLElement;
         clone.querySelector(".ai-overview-sources")?.remove();
+        clone.querySelector(".ai-overview-related")?.remove();
         const text = clone.innerText.trim();
         if (!text) return;
 

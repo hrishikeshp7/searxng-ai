@@ -808,6 +808,53 @@ summary.title {
       position: relative;
       transition: max-height 0.3s ease;
 
+      .ai-overview-media {
+        display: flex;
+        gap: 0.55rem;
+        margin: 0.1rem 0 0.75rem 0;
+        overflow-x: auto;
+        padding-bottom: 0.2rem;
+
+        .ai-media-card {
+          position: relative;
+          flex: 0 0 70px;
+          width: 70px;
+          height: 70px;
+          border: 1px solid var(--color-ai-overview-border);
+          .rounded-corners(0.55rem);
+          overflow: hidden;
+          background: rgb(var(--color-ai-overview-accent-rgb) / 5%);
+          transition: transform 0.15s ease, border-color 0.15s ease;
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+          }
+
+          .ai-media-domain {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 0.1rem 0.2rem;
+            background: rgba(0, 0, 0, 0.65);
+            color: #fff;
+            font-size: 0.68em;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          &:hover {
+            transform: translateY(-2px);
+            border-color: var(--color-ai-overview-accent);
+          }
+        }
+      }
+
       &.collapsed {
         max-height: 240px;
         overflow: hidden;
@@ -1150,6 +1197,43 @@ summary.title {
           border-color: var(--color-ai-overview-accent);
           text-decoration: none;
           box-shadow: 0 0 0 2px rgb(var(--color-ai-overview-accent-rgb) / 20%);
+        }
+      }
+    }
+
+    .ai-overview-related {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem;
+      margin: 0.75rem 0 0 0;
+      padding: 0.65rem 0 0 0;
+      border-top: 1px dashed var(--color-ai-overview-border);
+
+      .ai-related-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.3rem 0.75rem;
+        font-size: 0.82em;
+        font-weight: 500;
+        color: var(--color-base-font);
+        background: var(--color-base-background);
+        border: 1px solid var(--color-ai-overview-border);
+        .rounded-corners(2rem);
+        cursor: pointer;
+        transition: all 0.15s ease;
+
+        .ai-related-icon {
+          font-size: 0.85em;
+          opacity: 0.7;
+        }
+
+        &:hover {
+          color: var(--color-ai-overview-accent);
+          border-color: var(--color-ai-overview-accent);
+          background: rgb(var(--color-ai-overview-accent-rgb) / 8%);
+          transform: translateY(-1px);
         }
       }
     }
