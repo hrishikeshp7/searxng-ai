@@ -27,7 +27,7 @@ import re
 import time
 import typing as t
 from html import escape
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 import flask
 from flask_babel import gettext
@@ -127,6 +127,42 @@ def _extract_domain(url: str) -> str:
         return ""
 
 
+def _text_fragment_url(url: str, snippet: str) -> str:
+    """Append a W3C Scroll-to-Text-Fragment (#:~:text=...) directive to the URL,
+    allowing browsers (Chrome, Edge, Safari, Opera) to automatically scroll to
+    and highlight the cited snippet on the destination page."""
+    if not url or not snippet:
+        return url
+
+    # Remove search-engine dates, timestamps, and leading/trailing ellipsis
+    text = re.sub(
+        r"^\s*(\d{1,2}[-/ ]\w{3,9}[-/ ]\d{2,4}|\w{3,9}\s+\d{1,2},?\s+\d{4}|\d+\s+(?:days?|hours?|mins?|months?|years?)\s+ago)\s*(\.\.\.|…|[-—–·:])\s*",
+        "",
+        snippet,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(r"^\s*(\.\.\.|…)\s*", "", text)
+    text = re.sub(r"\s*(\.\.\.|…)\s*$", "", text).strip()
+
+    raw_words = [w.strip(".,;:!?\"'()[]{}«»") for w in text.split()]
+    words = [w for w in raw_words if len(w) > 1 or w.isalnum()]
+
+    if len(words) < 3:
+        return url
+
+    # Pick 5-7 words for high-accuracy match without being overly brittle
+    phrase = " ".join(words[:6])
+    if not phrase:
+        return url
+
+    encoded = quote(phrase, safe=" ")
+    encoded = encoded.replace("-", "%2D").replace(",", "%2C").replace("&", "%26")
+    encoded = encoded.replace(" ", "%20")
+
+    sep = ":~:text=" if "#" in url else "#:~:text="
+    return f"{url}{sep}{encoded}"
+
+
 _markdown = MarkdownIt("commonmark", {"html": False, "typographer": True}).enable("table")
 _networks: dict[str, Network] = {}
 
@@ -214,8 +250,9 @@ def _sources_html(sources: list[dict[str, str]]) -> str:
         domain = _extract_domain(url)
         domain_span = f'<span class="ai-source-domain">{escape(domain)}</span>' if domain else ""
         title = src.get("title", "")
+        target_url = _text_fragment_url(url, src.get("content", ""))
         items.append(
-            f'<li><a href="{escape(url)}" target="_blank" rel="noreferrer" '
+            f'<li><a href="{escape(target_url)}" target="_blank" rel="noreferrer" '
             f'class="ai-source-chip" data-source="{i}" title="{escape(title)}">'
             f'<span class="ai-source-num">{i}</span>'
             f'{domain_span}'
@@ -235,11 +272,12 @@ def _format_citations(html: str, sources: list[dict[str, str]]) -> str:
             return match.group(0)
         if 1 <= idx <= len(sources):
             src = sources[idx - 1]
-            url = escape(src.get("url", ""))
-            domain = escape(_extract_domain(src.get("url", "")))
+            raw_url = src.get("url", "")
+            target_url = escape(_text_fragment_url(raw_url, src.get("content", "")))
+            domain = escape(_extract_domain(raw_url))
             title = escape(src.get("title", ""))
             return (
-                f'<a class="ai-citation" href="{url}" target="_blank" rel="noreferrer" '
+                f'<a class="ai-citation" href="{target_url}" target="_blank" rel="noreferrer" '
                 f'data-citation="{idx}" data-domain="{domain}" title="{title}">'
                 f'<span class="ai-citation-num">{idx}</span>'
                 f'</a>'
@@ -319,7 +357,7 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
     enhanced_sources = [
         {
             "title": src.get("title", ""),
-            "url": src.get("url", ""),
+            "url": _text_fragment_url(src.get("url", ""), src.get("content", "")),
             "content": src.get("content", ""),
             "domain": _extract_domain(src.get("url", "")),
         }
