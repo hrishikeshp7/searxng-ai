@@ -17,11 +17,18 @@ type ThumbnailItem = {
   domain: string;
 };
 
+type UsageItem = {
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  total_tokens?: number;
+};
+
 type ApiResponse = {
   html?: string;
   sources?: SourceItem[];
   thumbnails?: ThumbnailItem[];
   related?: string[];
+  usage?: UsageItem;
   error?: string;
 };
 
@@ -31,6 +38,7 @@ type Result = {
   sources?: SourceItem[];
   thumbnails?: ThumbnailItem[];
   related?: string[];
+  usage?: UsageItem;
   error?: boolean;
 };
 
@@ -85,7 +93,8 @@ export default class AiOverview extends Plugin {
         html: data.html,
         sources: data.sources,
         thumbnails: data.thumbnails,
-        related: data.related
+        related: data.related,
+        usage: data.usage
       };
     } catch (error) {
       console.error("[ai_overview]", error);
@@ -93,7 +102,7 @@ export default class AiOverview extends Plugin {
     }
   }
 
-  protected async post({ element, html, sources, thumbnails, related, error }: Result): Promise<void> {
+  protected async post({ element, html, sources, thumbnails, related, usage, error }: Result): Promise<void> {
     const content = element.querySelector<HTMLElement>(".ai-overview-content");
     if (!content) return;
 
@@ -113,6 +122,94 @@ export default class AiOverview extends Plugin {
     this.setupCopyButtons(element, content);
     this.setupCitations(element, sources ?? []);
     this.setupRelatedQueries(element, related ?? []);
+    this.setupTokenMonitor(element, usage);
+  }
+
+  private setupTokenMonitor(element: HTMLElement, usage?: UsageItem): void {
+    if (!usage?.total_tokens) return;
+
+    const actions = element.querySelector<HTMLElement>(".ai-overview-actions");
+    if (!actions || actions.querySelector(".ai-overview-token-badge")) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const storageKey = "sxng_ai_token_stats";
+    const dailyLimit = 200_000;
+
+    let stats = {
+      date: today,
+      prompt: 0,
+      completion: 0,
+      total: 0,
+      count: 0
+    };
+
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && parsed.date === today) {
+          stats = {
+            date: today,
+            prompt: Number(parsed.prompt) || 0,
+            completion: Number(parsed.completion) || 0,
+            total: Number(parsed.total) || 0,
+            count: Number(parsed.count) || 0
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("[ai_overview] Failed to read token stats", e);
+    }
+
+    const currentTotal = usage.total_tokens || 0;
+    const currentPrompt = usage.prompt_tokens || 0;
+    const currentCompletion = usage.completion_tokens || 0;
+
+    stats.prompt += currentPrompt;
+    stats.completion += currentCompletion;
+    stats.total += currentTotal;
+    stats.count += 1;
+
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(stats));
+    } catch (e) {
+      console.warn("[ai_overview] Failed to save token stats", e);
+    }
+
+    const formatK = (n: number) => {
+      if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+      if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+      return n.toString();
+    };
+
+    const pct = Math.min(100, Math.round((stats.total / dailyLimit) * 100));
+    const remaining = Math.max(0, dailyLimit - stats.total);
+
+    const badge = document.createElement("div");
+    badge.className = "ai-overview-token-badge";
+    if (pct >= 95) {
+      badge.classList.add("danger");
+    } else if (pct >= 80) {
+      badge.classList.add("warning");
+    }
+
+    badge.title = [
+      `Search: ${currentPrompt.toLocaleString()} in · ${currentCompletion.toLocaleString()} out (${currentTotal.toLocaleString()} tokens)`,
+      `Today: ${stats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%, ${remaining.toLocaleString()} left across ${stats.count} searches)`
+    ].join("\n");
+
+    const icon = document.createElement("span");
+    icon.className = "token-icon";
+    icon.textContent = "⚡";
+
+    const text = document.createElement("span");
+    text.className = "token-text";
+    text.textContent = `${formatK(currentTotal)} · ${formatK(stats.total)}/${formatK(dailyLimit)} (${pct}%)`;
+
+    badge.appendChild(icon);
+    badge.appendChild(text);
+
+    actions.prepend(badge);
   }
 
   private setupThumbnails(element: HTMLElement, thumbnails: ThumbnailItem[]): void {

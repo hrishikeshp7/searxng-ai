@@ -736,7 +736,47 @@ summary.title {
       .ai-overview-actions {
         display: flex;
         align-items: center;
-        gap: 0.35rem;
+        gap: 0.45rem;
+
+        .ai-overview-token-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.3rem;
+          font-size: 0.72rem;
+          font-weight: 500;
+          font-family: var(--font-monospace, monospace);
+          padding: 0.15rem 0.5rem;
+          .rounded-corners(0.35rem);
+          background: rgb(var(--color-ai-overview-accent-rgb) / 8%);
+          border: 1px solid rgb(var(--color-ai-overview-accent-rgb) / 20%);
+          color: var(--color-base-font);
+          opacity: 0.85;
+          cursor: help;
+          user-select: none;
+          transition: all 0.15s ease;
+
+          &:hover {
+            opacity: 1;
+            background: rgb(var(--color-ai-overview-accent-rgb) / 15%);
+          }
+
+          .token-icon {
+            font-size: 0.78rem;
+            line-height: 1;
+          }
+
+          &.warning {
+            border-color: #f59e0b;
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.12);
+          }
+
+          &.danger {
+            border-color: #ef4444;
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+          }
+        }
 
         .ai-overview-copy-btn {
           display: inline-flex;

@@ -365,6 +365,12 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
             timeout=timeout,
         )
         answer_text = completion["choices"][0]["message"]["content"]
+        raw_usage = completion.get("usage") or {}
+        usage = {
+            "prompt_tokens": int(raw_usage.get("prompt_tokens", 0)),
+            "completion_tokens": int(raw_usage.get("completion_tokens", 0)),
+            "total_tokens": int(raw_usage.get("total_tokens", 0)),
+        }
     except Exception:  # pylint: disable=broad-except
         log.exception("request to the AI overview backend failed")
         return flask.jsonify({"error": gettext("Could not generate an AI overview.")}), 502
@@ -404,6 +410,7 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
         "sources": enhanced_sources,
         "thumbnails": thumbnails,
         "related": related_queries,
+        "usage": usage,
     })
 
 
