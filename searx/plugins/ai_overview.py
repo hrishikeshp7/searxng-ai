@@ -130,7 +130,7 @@ def _extract_domain(url: str) -> str:
 def _text_fragment_url(url: str, snippet: str) -> str:
     """Append a W3C Scroll-to-Text-Fragment (#:~:text=...) directive to the URL,
     allowing browsers (Chrome, Edge, Safari, Opera) to automatically scroll to
-    and highlight the cited snippet on the destination page."""
+    and highlight the full cited sentence/line on the destination page."""
     if not url or not snippet:
         return url
 
@@ -144,23 +144,35 @@ def _text_fragment_url(url: str, snippet: str) -> str:
     text = re.sub(r"^\s*(\.\.\.|…)\s*", "", text)
     text = re.sub(r"\s*(\.\.\.|…)\s*$", "", text).strip()
 
-    raw_words = [w.strip(".,;:!?\"'()[]{}«»") for w in text.split()]
-    words = [w for w in raw_words if len(w) > 1 or w.isalnum()]
+    # Prefer the first complete sentence for natural quotation highlighting
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    sentence = sentences[0].strip() if sentences else text.strip()
+    words = sentence.split()
 
+    if len(words) < 3:
+        words = text.split()
     if len(words) < 3:
         return url
 
-    # Pick 5-7 words for high-accuracy match without being overly brittle
-    phrase = " ".join(words[:6])
-    if not phrase:
+    def _encode(s: str) -> str:
+        clean = s.strip(".,;:!?\"'()[]{}«»")
+        enc = quote(clean, safe=" ")
+        enc = enc.replace("-", "%2D").replace(",", "%2C").replace("&", "%26")
+        return enc.replace(" ", "%20")
+
+    if len(words) <= 12:
+        fragment = _encode(" ".join(words))
+    else:
+        # textStart,textEnd highlights the full line/sentence from start to end
+        start = _encode(" ".join(words[:4]))
+        end = _encode(" ".join(words[-4:]))
+        fragment = f"{start},{end}"
+
+    if not fragment or fragment == ",":
         return url
 
-    encoded = quote(phrase, safe=" ")
-    encoded = encoded.replace("-", "%2D").replace(",", "%2C").replace("&", "%26")
-    encoded = encoded.replace(" ", "%20")
-
     sep = ":~:text=" if "#" in url else "#:~:text="
-    return f"{url}{sep}{encoded}"
+    return f"{url}{sep}{fragment}"
 
 
 _markdown = MarkdownIt("commonmark", {"html": False, "typographer": True}).enable("table")
