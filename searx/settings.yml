@@ -272,6 +272,12 @@ plugins:
 #   max_tokens: 500
 #   # Seconds to wait for the API before giving up.
 #   timeout: 20
+#   # Trigger mode:
+#   #   - 'auto' (default): Generates automatically for informational queries;
+#   #     shows a manual "Generate overview" button for navigational/direct queries.
+#   #   - 'manual': Always displays "Generate overview" button, saving LLM tokens
+#   #     until explicitly requested by the user.
+#   trigger_mode: "auto"
 #   # Uncomment to override the default system prompt.
 #   # system_prompt: "..."
 

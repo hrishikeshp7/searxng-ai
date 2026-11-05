@@ -280,5 +280,6 @@ SCHEMA: dict[str, t.Any] = {
         'num_results': SettingsValue(int, 5),
         'max_tokens': SettingsValue(int, 500),
         'timeout': SettingsValue(numbers.Real, 20),
+        'trigger_mode': SettingsValue(str, 'auto', 'SEARXNG_AI_OVERVIEW_TRIGGER_MODE'),
     },
 }

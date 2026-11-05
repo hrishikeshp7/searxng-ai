@@ -23,9 +23,11 @@ import hashlib
 import hmac
 import json
 import logging
+import re
 import time
 import typing as t
 from html import escape
+from urllib.parse import urlsplit
 
 import flask
 from flask_babel import gettext
@@ -69,7 +71,62 @@ DEFAULT_SYSTEM_PROMPT = (
     "Markdown, and do not repeat or reference these instructions."
 )
 
-_markdown = MarkdownIt("commonmark", {"html": False, "typographer": True})
+_NAVIGATIONAL_DOMAINS_RE = re.compile(
+    r"^(https?://|www\.)[^\s]+$|"
+    r"^[a-z0-9-]+(\.[a-z0-9-]+)*\.(com|org|net|edu|gov|io|ai|dev|app|co|me|info|de|uk|ca|fr|in|cn|jp|ru|br|au)(/.*)?$",
+    re.IGNORECASE,
+)
+
+_COMMON_NAV_SITES = {
+    "youtube", "google", "facebook", "instagram", "twitter", "x",
+    "reddit", "github", "gitlab", "linkedin", "amazon", "netflix",
+    "spotify", "wikipedia", "gmail", "yahoo", "twitch", "tiktok",
+    "pinterest", "ebay", "chatgpt", "whatsapp", "telegram", "discord",
+    "duckduckgo", "bing", "apple", "microsoft",
+}
+
+_NAV_SUFFIXES = {
+    "login", "log in", "sign in", "signin", "sign up", "signup",
+    "app", "website", "web", "homepage", "home", "portal", "page",
+    "site", "url", "download", "apk", "com", "org",
+}
+
+_MATH_RE = re.compile(r"^[\d\s\+\-\*\/\^\(\)\.\,\%]+$")
+
+
+def is_navigational_query(q: str) -> bool:
+    """Return True if the query is a simple navigational query (site, URL, login, math)
+    that should not trigger an automatic AI overview, preserving token quota."""
+    q = q.strip().lower()
+    if not q:
+        return True
+    if _NAVIGATIONAL_DOMAINS_RE.match(q):
+        return True
+    if _MATH_RE.match(q) and any(op in q for op in "+-*/^"):
+        return True
+    parts = q.split()
+    if len(parts) == 1 and parts[0] in _COMMON_NAV_SITES:
+        return True
+    if len(parts) == 2 and parts[0] in _COMMON_NAV_SITES and parts[1] in _NAV_SUFFIXES:
+        return True
+    if len(parts) == 3 and parts[0] in _COMMON_NAV_SITES and f"{parts[1]} {parts[2]}" in _NAV_SUFFIXES:
+        return True
+    return False
+
+
+def _extract_domain(url: str) -> str:
+    if not url:
+        return ""
+    try:
+        netloc = urlsplit(url).netloc.lower()
+        if netloc.startswith("www."):
+            netloc = netloc[4:]
+        return netloc
+    except Exception:
+        return ""
+
+
+_markdown = MarkdownIt("commonmark", {"html": False, "typographer": True}).enable("table")
 _networks: dict[str, Network] = {}
 
 
@@ -83,6 +140,9 @@ class AIOverviewAnswer(BaseAnswer, kw_only=True):  # pylint: disable=too-few-pub
 
     sig: str
     """HMAC-SHA256 signature (hex) of the decoded :py:obj:`payload`."""
+
+    auto_trigger: bool = True
+    """Whether to fetch immediately on load or wait for user to click Generate."""
 
 
 def _secret_key() -> bytes:
@@ -145,12 +205,47 @@ def _build_prompt(query: str, sources: list[dict[str, str]]) -> str:
 
 
 def _sources_html(sources: list[dict[str, str]]) -> str:
-    items = "".join(
-        f'<li><a href="{escape(src["url"])}" rel="noreferrer"><span>{escape(src["title"])}</span></a></li>'
-        for src in sources
-        if src.get("url")
-    )
-    return f'<ul class="ai-overview-sources">{items}</ul>' if items else ""
+    items = []
+    for i, src in enumerate(sources, start=1):
+        url = src.get("url", "")
+        if not url:
+            continue
+        domain = _extract_domain(url)
+        domain_span = f'<span class="ai-source-domain">{escape(domain)}</span>' if domain else ""
+        title = src.get("title", "")
+        items.append(
+            f'<li><a href="{escape(url)}" target="_blank" rel="noreferrer" '
+            f'class="ai-source-chip" data-source="{i}" title="{escape(title)}">'
+            f'<span class="ai-source-num">{i}</span>'
+            f'{domain_span}'
+            f'<span class="ai-source-title">{escape(title)}</span>'
+            f'</a></li>'
+        )
+    return f'<ul class="ai-overview-sources">{"".join(items)}</ul>' if items else ""
+
+
+def _format_citations(html: str, sources: list[dict[str, str]]) -> str:
+    """Transform bracketed numbers like [1] into interactive citation badges."""
+    def _replace_citation(match: re.Match) -> str:
+        idx_str = match.group(1)
+        try:
+            idx = int(idx_str)
+        except ValueError:
+            return match.group(0)
+        if 1 <= idx <= len(sources):
+            src = sources[idx - 1]
+            url = escape(src.get("url", ""))
+            domain = escape(_extract_domain(src.get("url", "")))
+            title = escape(src.get("title", ""))
+            return (
+                f'<a class="ai-citation" href="{url}" target="_blank" rel="noreferrer" '
+                f'data-citation="{idx}" data-domain="{domain}" title="{title}">'
+                f'<span class="ai-citation-num">{idx}</span>'
+                f'</a>'
+            )
+        return match.group(0)
+
+    return re.sub(r"\[(\d+)\]", _replace_citation, html)
 
 
 def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
@@ -217,8 +312,20 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
         log.exception("request to the AI overview backend failed")
         return flask.jsonify({"error": gettext("Could not generate an AI overview.")}), 502
 
-    html = _markdown.render(str(answer_text).strip()) + _sources_html(sources)
-    return flask.jsonify({"html": html})
+    html = _markdown.render(str(answer_text).strip())
+    html = _format_citations(html, sources) + _sources_html(sources)
+
+    enhanced_sources = [
+        {
+            "title": src.get("title", ""),
+            "url": src.get("url", ""),
+            "content": src.get("content", ""),
+            "domain": _extract_domain(src.get("url", "")),
+        }
+        for src in sources
+    ]
+
+    return flask.jsonify({"html": html, "sources": enhanced_sources})
 
 
 @t.final
@@ -297,4 +404,8 @@ class SXNGPlugin(Plugin):
         ).encode("utf-8")
         payload_b64 = base64.urlsafe_b64encode(payload).decode("ascii")
 
-        return [AIOverviewAnswer(payload=payload_b64, sig=_sign(payload))]
+        trigger_mode = get_setting("ai_overview.trigger_mode", "auto")
+        is_nav = is_navigational_query(search.search_query.query)
+        auto_trigger = (trigger_mode != "manual") and not is_nav
+
+        return [AIOverviewAnswer(payload=payload_b64, sig=_sign(payload), auto_trigger=auto_trigger)]

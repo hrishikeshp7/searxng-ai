@@ -330,6 +330,10 @@ def get_translations():
         'error_loading_next_page': gettext('Error loading the next page'),
         # AI overview
         'ai_overview_error': gettext('Could not generate an AI overview.'),
+        'show_more': gettext('Show more'),
+        'show_less': gettext('Show less'),
+        'copy': gettext('Copy'),
+        'copied': gettext('Copied!'),
     }
 
 

@@ -1,13 +1,34 @@
 {% from 'simple/icons.html' import icon_small %}
-<div class="ai-overview" data-ai-overview data-url="{{ url_for('ai_overview') }}" data-payload="{{ answer.payload }}" data-sig="{{ answer.sig }}">
-  <h5>{{ icon_small('sparkles') }} {{ _('AI overview') }}</h5>
-  <div class="ai-overview-content ai-overview-loading" aria-live="polite" aria-busy="true">
-    <span class="sr-only">{{ _('Generating AI overview…') }}</span>
-    <div class="ai-overview-skeleton" aria-hidden="true">
-      <div class="ai-overview-skeleton-line"></div>
-      <div class="ai-overview-skeleton-line"></div>
-      <div class="ai-overview-skeleton-line short"></div>
+<div class="ai-overview" data-ai-overview data-url="{{ url_for('ai_overview') }}" data-payload="{{ answer.payload }}" data-sig="{{ answer.sig }}" data-auto-trigger="{{ 'true' if answer.auto_trigger else 'false' }}">
+  <div class="ai-overview-header">
+    <h5>{{ icon_small('sparkles') }} {{ _('AI overview') }}</h5>
+    <div class="ai-overview-actions">
+      <button type="button" class="ai-overview-copy-btn" title="{{ _('Copy overview') }}" aria-label="{{ _('Copy overview') }}" style="display: none;">
+        <svg class="sxng-icon-set-small" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
     </div>
   </div>
-  <p class="ai-overview-disclaimer">{{ _('AI-generated overview, may be inaccurate.') }}</p>
+  {% if not answer.auto_trigger %}
+  <div class="ai-overview-prompt">
+    <button type="button" class="ai-overview-generate-btn">
+      {{ icon_small('sparkles') }} {{ _('Generate AI overview') }}
+    </button>
+  </div>
+  {% endif %}
+  <div class="ai-overview-content-wrapper{% if not answer.auto_trigger %} hidden{% endif %}">
+    <div class="ai-overview-content ai-overview-loading" aria-live="polite" aria-busy="true">
+      <span class="sr-only">{{ _('Generating AI overview…') }}</span>
+      <div class="ai-overview-skeleton" aria-hidden="true">
+        <div class="ai-overview-skeleton-line"></div>
+        <div class="ai-overview-skeleton-line"></div>
+        <div class="ai-overview-skeleton-line short"></div>
+      </div>
+    </div>
+    <div class="ai-overview-fade-mask" aria-hidden="true"></div>
+  </div>
+  <button type="button" class="ai-overview-toggle-btn" style="display: none;">
+    <span class="toggle-text">{{ _('Show more') }}</span>
+    {{ icon_small('navigate-down') }}
+  </button>
+  <p class="ai-overview-disclaimer{% if not answer.auto_trigger %} hidden{% endif %}">{{ _('AI-generated overview, may be inaccurate.') }}</p>
 </div>
