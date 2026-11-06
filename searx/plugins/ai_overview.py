@@ -82,17 +82,56 @@ _NAVIGATIONAL_DOMAINS_RE = re.compile(
 )
 
 _COMMON_NAV_SITES = {
-    "youtube", "google", "facebook", "instagram", "twitter", "x",
-    "reddit", "github", "gitlab", "linkedin", "amazon", "netflix",
-    "spotify", "wikipedia", "gmail", "yahoo", "twitch", "tiktok",
-    "pinterest", "ebay", "chatgpt", "whatsapp", "telegram", "discord",
-    "duckduckgo", "bing", "apple", "microsoft",
+    "youtube",
+    "google",
+    "facebook",
+    "instagram",
+    "twitter",
+    "x",
+    "reddit",
+    "github",
+    "gitlab",
+    "linkedin",
+    "amazon",
+    "netflix",
+    "spotify",
+    "wikipedia",
+    "gmail",
+    "yahoo",
+    "twitch",
+    "tiktok",
+    "pinterest",
+    "ebay",
+    "chatgpt",
+    "whatsapp",
+    "telegram",
+    "discord",
+    "duckduckgo",
+    "bing",
+    "apple",
+    "microsoft",
 }
 
 _NAV_SUFFIXES = {
-    "login", "log in", "sign in", "signin", "sign up", "signup",
-    "app", "website", "web", "homepage", "home", "portal", "page",
-    "site", "url", "download", "apk", "com", "org",
+    "login",
+    "log in",
+    "sign in",
+    "signin",
+    "sign up",
+    "signup",
+    "app",
+    "website",
+    "web",
+    "homepage",
+    "home",
+    "portal",
+    "page",
+    "site",
+    "url",
+    "download",
+    "apk",
+    "com",
+    "org",
 }
 
 _MATH_RE = re.compile(r"^[\d\s\+\-\*\/\^\(\)\.\,\%]+$")
@@ -280,6 +319,7 @@ def _sources_html(sources: list[dict[str, str]]) -> str:
 def _format_citations(html: str, sources: list[dict[str, str]]) -> str:
     """Transform bracketed numbers like [1] or 【1†L1-L4】 into interactive citation badges,
     while stripping hallucinated/phantom citation numbers (grounding check)."""
+
     def _replace_citation(match: re.Match) -> str:
         idx_str = match.group(2)
         try:
@@ -385,7 +425,7 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
     )
     if related_match:
         related_line = related_match.group(1).strip()
-        answer_raw = answer_raw[:related_match.start()].strip()
+        answer_raw = answer_raw[: related_match.start()].strip()
         parts = [q.strip(" \t\n\r*-\"'\u2022") for q in re.split(r"\|", related_line)]
         for part in parts:
             if 3 <= len(part) <= 80:
@@ -405,13 +445,15 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
         for src in sources
     ]
 
-    return flask.jsonify({
-        "html": html,
-        "sources": enhanced_sources,
-        "thumbnails": thumbnails,
-        "related": related_queries,
-        "usage": usage,
-    })
+    return flask.jsonify(
+        {
+            "html": html,
+            "sources": enhanced_sources,
+            "thumbnails": thumbnails,
+            "related": related_queries,
+            "usage": usage,
+        }
+    )
 
 
 @t.final
@@ -493,12 +535,14 @@ class SXNGPlugin(Plugin):
             )
             if thumb and isinstance(thumb, str) and thumb.startswith(("http://", "https://")):
                 if not any(t["img"] == thumb for t in thumbnails):
-                    thumbnails.append({
-                        "img": thumb,
-                        "url": _text_fragment_url(result.url or "", getattr(result, "content", "")),
-                        "title": result.title.strip()[:100],
-                        "domain": _extract_domain(result.url or ""),
-                    })
+                    thumbnails.append(
+                        {
+                            "img": thumb,
+                            "url": _text_fragment_url(result.url or "", getattr(result, "content", "")),
+                            "title": result.title.strip()[:100],
+                            "domain": _extract_domain(result.url or ""),
+                        }
+                    )
                     if len(thumbnails) >= 3:
                         break
 
