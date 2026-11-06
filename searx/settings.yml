@@ -250,7 +250,7 @@ plugins:
     active: true
 
   searx.plugins.ai_overview.SXNGPlugin:
-    active: false
+    active: true
 
 
 # Configuration of the "AI overview" plugin: it is only shown as an option in

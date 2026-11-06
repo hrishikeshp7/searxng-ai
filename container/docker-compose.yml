@@ -6,7 +6,10 @@ name: searxng
 services:
   core:
     container_name: searxng-core
-    image: docker.io/searxng/searxng:${SEARXNG_VERSION:-latest}
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: searxng-ai:latest
     restart: always
     ports:
       - ${SEARXNG_HOST:+${SEARXNG_HOST}:}${SEARXNG_PORT:-8080}:${SEARXNG_PORT:-8080}

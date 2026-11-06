@@ -6,3 +6,7 @@ use_default_settings: true
 server:
   secret_key: "ultrasecretkey"
   image_proxy: true
+
+plugins:
+  searx.plugins.ai_overview.SXNGPlugin:
+    active: true
