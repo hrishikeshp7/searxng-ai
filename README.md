@@ -42,6 +42,14 @@ An enhanced, production-ready fork of **SearXNG** featuring a fast, asynchronous
 
 ---
 
+### Quick Run with Prebuilt Container (No clone needed)
+
+```bash
+docker pull ghcr.io/hrishikeshp7/searxng-ai:latest
+```
+
+---
+
 ## 🚀 Quick Start (Docker Compose)
 
 The fastest and recommended way to deploy SearXNG AI.

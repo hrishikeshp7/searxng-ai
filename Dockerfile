@@ -41,12 +41,16 @@ RUN chmod +x /usr/local/searxng/entrypoint.sh
 
 ARG CREATED="0001-01-01T00:00:00Z"
 ARG VERSION="custom-ai"
-ARG VCS_URL="https://github.com/hrishikeshp7/searxng-ai-23"
+ARG VCS_URL="https://github.com/hrishikeshp7/searxng-ai"
 ARG VCS_REVISION="unknown"
 
 LABEL org.opencontainers.image.created="$CREATED" \
-    org.opencontainers.image.description="SearXNG AI custom container" \
-    org.opencontainers.image.title="SearXNG AI" \
+    org.opencontainers.image.description="SearXNG AI - Privacy-Preserving Metasearch Engine with Grounded AI Overviews" \
+    org.opencontainers.image.title="searxng-ai" \
+    org.opencontainers.image.url="https://github.com/hrishikeshp7/searxng-ai" \
+    org.opencontainers.image.source="https://github.com/hrishikeshp7/searxng-ai" \
+    org.opencontainers.image.documentation="https://github.com/hrishikeshp7/searxng-ai#readme" \
+    org.opencontainers.image.licenses="AGPL-3.0-or-later" \
     org.opencontainers.image.version="$VERSION"
 
 ENV __SEARXNG_VERSION="$VERSION" \

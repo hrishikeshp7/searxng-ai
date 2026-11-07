@@ -12,5 +12,5 @@ and lets the runtime skip the git subprocess calls entirely.
 VERSION_STRING = "2026.9.25+66321ff21"
 VERSION_TAG = "2026.9.25+66321ff21"
 DOCKER_TAG = "2026.9.25-66321ff21"
-GIT_URL = "https://github.com/hrishikeshp7/searxng-ai-23"
+GIT_URL = "https://github.com/hrishikeshp7/searxng-ai"
 GIT_BRANCH = "master"
