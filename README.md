@@ -7,7 +7,7 @@
 An enhanced, production-ready fork of **SearXNG** featuring a fast, asynchronous, citation-grounded **AI Overview** card above search results — powered by any OpenAI-compatible LLM (Groq, Ollama, OpenAI, OpenRouter, DeepSeek, and more).
 
 [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg?style=flat-square)](https://www.gnu.org/licenses/agpl-3.0)
-[![Docker Multi-Arch](https://img.shields.io/badge/Docker-linux%2Famd64%20%7C%20linux%2Farm64-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/hrishikeshp7/searxng-ai-23/pkgs/container/searxng-ai-23)
+[![Docker Multi-Arch](https://img.shields.io/badge/Docker-linux%2Famd64%20%7C%20linux%2Farm64-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/hrishikeshp7/searxng-ai/pkgs/container/searxng-ai)
 [![Python Version](https://img.shields.io/badge/Python-3.10%20%7C%203.11%20%7C%203.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Valkey Cache](https://img.shields.io/badge/Cache-Valkey%209-FF4438?style=flat-square)](https://valkey.io)
 
@@ -53,8 +53,8 @@ The fastest and recommended way to deploy SearXNG AI.
 ### 2. Clone and Configure
 
 ```bash
-git clone https://github.com/hrishikeshp7/searxng-ai-23.git
-cd searxng-ai-23
+git clone https://github.com/hrishikeshp7/searxng-ai.git
+cd searxng-ai
 
 # Create your environment file from the template
 cp .env.example .env
