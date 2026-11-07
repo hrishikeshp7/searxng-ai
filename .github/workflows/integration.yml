@@ -6,9 +6,19 @@ on:
   push:
     branches:
       - master
+    paths-ignore:
+      - "docs/**"
+      - "*.rst"
+      - "*.md"
+      - ".gitignore"
   pull_request:
     branches:
       - master
+    paths-ignore:
+      - "docs/**"
+      - "*.rst"
+      - "*.md"
+      - ".gitignore"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}

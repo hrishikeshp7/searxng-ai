@@ -55,7 +55,7 @@ jobs:
             type=sha,prefix=
           labels: |
             org.opencontainers.image.title=searxng-ai
-            org.opencontainers.image.description=SearXNG AI - Privacy-Preserving Metasearch Engine with Grounded AI Overviews
+            org.opencontainers.image.description=SearXNG AI - Metasearch Engine with Grounded AI Overviews
             org.opencontainers.image.url=https://github.com/hrishikeshp7/searxng-ai
             org.opencontainers.image.source=https://github.com/hrishikeshp7/searxng-ai
             org.opencontainers.image.documentation=https://github.com/hrishikeshp7/searxng-ai#readme
