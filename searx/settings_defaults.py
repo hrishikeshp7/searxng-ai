@@ -217,6 +217,7 @@ SCHEMA: dict[str, t.Any] = {
         'limiter': SettingsValue(bool, False, 'SEARXNG_LIMITER'),
         'public_instance': SettingsValue(bool, False, 'SEARXNG_PUBLIC_INSTANCE'),
         'secret_key': SettingsValue(str, environ_name='SEARXNG_SECRET'),
+        'access_key': SettingsValue((False, str), False, 'SEARXNG_ACCESS_KEY'),
         'base_url': SettingsValue((False, str), False, 'SEARXNG_BASE_URL'),
         'image_proxy': SettingsValue(bool, False, 'SEARXNG_IMAGE_PROXY'),
         'open_in_proxy': SettingsValue(bool, True, 'SEARXNG_OPEN_IN_PROXY'),

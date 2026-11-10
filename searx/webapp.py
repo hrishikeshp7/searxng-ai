@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import base64
+import hmac
 
 from timeit import default_timer
 from html import escape
@@ -22,6 +23,15 @@ import warnings
 from curl_cffi.requests.exceptions import RequestException, Timeout
 
 from searx.web_proxy import is_safe_url, generate_proxy_token, verify_proxy_token, rewrite_html
+from searx.auth import (
+    COOKIE_NAME,
+    COOKIE_MAX_AGE,
+    generate_auth_cookie,
+    verify_auth_cookie,
+    verify_basic_auth,
+    clean_url_without_key,
+    render_auth_page,
+)
 
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
@@ -485,6 +495,59 @@ def render(template_name: str, **kwargs):
 
 
 @app.before_request
+def auth_guard():
+    access_key = get_setting("server.access_key")
+    if not access_key:
+        return None
+
+    path = sxng_request.path
+    if (
+        path.startswith("/static/")
+        or path in ("/favicon.ico", "/robots.txt", "/healthz")
+        or path == "/auth"
+    ):
+        return None
+
+    secret_key = settings["server"]["secret_key"]
+
+    # 1. Check persistent signed auth cookie
+    cookie = sxng_request.cookies.get(COOKIE_NAME)
+    if verify_auth_cookie(cookie, secret_key, access_key):
+        return None
+
+    # 2. Check query param ?key=... or ?auth=...
+    url_key = sxng_request.args.get("key") or sxng_request.args.get("auth")
+    if url_key and hmac.compare_digest(url_key, access_key):
+        auth_cookie = generate_auth_cookie(secret_key, access_key)
+        is_secure = sxng_request.is_secure or sxng_request.headers.get("X-Forwarded-Proto") == "https"
+        if path == "/" and sxng_request.method == "GET":
+            clean_url = clean_url_without_key(sxng_request.url)
+            resp = redirect(clean_url)
+            resp.set_cookie(
+                COOKIE_NAME,
+                auth_cookie,
+                max_age=COOKIE_MAX_AGE,
+                httponly=True,
+                samesite="Lax",
+                secure=is_secure,
+            )
+            return resp
+        sxng_request._set_auth_cookie = auth_cookie
+        return None
+
+    # 3. Check HTTP Basic Auth header
+    auth_header = sxng_request.headers.get("Authorization")
+    if verify_basic_auth(auth_header, access_key):
+        return None
+
+    # 4. Unauthenticated -> render unlock page with 401 status and Basic auth header
+    next_url = sxng_request.full_path if sxng_request.method == "GET" else "/"
+    resp = make_response(render_auth_page(next_url=next_url), 401)
+    resp.headers["WWW-Authenticate"] = 'Basic realm="SearXNG Private"'
+    return resp
+
+
+@app.before_request
 def pre_request():
     sxng_request.start_time = default_timer()  # pylint: disable=assigning-non-slot
     sxng_request.render_time = 0  # pylint: disable=assigning-non-slot
@@ -553,6 +616,22 @@ def add_default_headers(response: flask.Response):
         if header in response.headers:
             continue
         response.headers[header] = value
+    return response
+
+
+@app.after_request
+def save_auth_cookie(response: flask.Response):
+    auth_cookie = getattr(sxng_request, "_set_auth_cookie", None)
+    if auth_cookie:
+        is_secure = sxng_request.is_secure or sxng_request.headers.get("X-Forwarded-Proto") == "https"
+        response.set_cookie(
+            COOKIE_NAME,
+            auth_cookie,
+            max_age=COOKIE_MAX_AGE,
+            httponly=True,
+            samesite="Lax",
+            secure=is_secure,
+        )
     return response
 
 
@@ -627,6 +706,49 @@ def index():
 @app.route('/healthz', methods=['GET'])
 def health():
     return Response('OK', mimetype='text/plain')
+
+
+@app.route('/auth', methods=['GET', 'POST'])
+def auth_endpoint():
+    access_key = get_setting('server.access_key')
+    if not access_key:
+        return redirect('/')
+
+    secret_key = settings['server']['secret_key']
+    is_secure = sxng_request.is_secure or sxng_request.headers.get('X-Forwarded-Proto') == 'https'
+
+    if sxng_request.method == 'POST':
+        key = sxng_request.form.get('key', '').strip()
+        next_url = sxng_request.form.get('next', '/')
+        if not next_url.startswith('/') or next_url.startswith('//'):
+            next_url = '/'
+
+        if hmac.compare_digest(key, access_key):
+            auth_cookie = generate_auth_cookie(secret_key, access_key)
+            resp = redirect(next_url)
+            resp.set_cookie(
+                COOKIE_NAME,
+                auth_cookie,
+                max_age=COOKIE_MAX_AGE,
+                httponly=True,
+                samesite='Lax',
+                secure=is_secure,
+            )
+            return resp
+        return make_response(render_auth_page(error='Invalid access key. Please try again.', next_url=next_url), 401)
+
+    # GET /auth
+    cookie = sxng_request.cookies.get(COOKIE_NAME)
+    if verify_auth_cookie(cookie, secret_key, access_key):
+        return redirect('/')
+    return make_response(render_auth_page(), 401)
+
+
+@app.route('/logout', methods=['GET', 'POST'])
+def logout_endpoint():
+    resp = redirect('/auth')
+    resp.delete_cookie(COOKIE_NAME)
+    return resp
 
 
 @app.route('/client<token>.css', methods=['GET', 'POST'])

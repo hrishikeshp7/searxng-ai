@@ -103,6 +103,8 @@ server:
   # values there.
 
   secret_key: "ultrasecretkey"  # Is overwritten by ${SEARXNG_SECRET}
+  # Private instance access key. Is overwritten by ${SEARXNG_ACCESS_KEY}
+  access_key: false
   # Proxy image results through SearXNG. Is overwritten by ${SEARXNG_IMAGE_PROXY}
   image_proxy: false
   # Open in proxy (Anonymous View) for search results. Is overwritten by ${SEARXNG_OPEN_IN_PROXY}
