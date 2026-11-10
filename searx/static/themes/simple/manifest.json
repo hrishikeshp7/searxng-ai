@@ -82,7 +82,7 @@
     ]
   },
   "src/js/plugin/AiOverview.ts": {
-    "file": "chunk/CFWtI1DY.min.js",
+    "file": "chunk/CB5Phy2C.min.js",
     "name": "aioverview",
     "src": "src/js/plugin/AiOverview.ts",
     "isDynamicEntry": true,

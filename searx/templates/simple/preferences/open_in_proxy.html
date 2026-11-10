@@ -1,0 +1,16 @@
+<fieldset>{{- '' -}}
+  <legend id="pref_open_in_proxy">{{ _('Open in proxy') }}</legend>{{- '' -}}
+  <p class="value">{{- '' -}}
+    <input type="checkbox" {{- ' ' -}}
+           name="open_in_proxy" {{- ' ' -}}
+           aria-labelledby="pref_open_in_proxy" {{- ' ' -}}
+           class="checkbox-onoff" {{- ' ' -}}
+           {%- if preferences.get_value('open_in_proxy') -%}
+             checked
+           {%- endif -%}{{- ' ' -}}
+           >{{- '' -}}
+  </p>{{- '' -}}
+  <div class="description">
+    {{- _('Show "open in proxy" link in search results to view pages anonymously') -}}
+  </div>{{- '' -}}
+</fieldset>{{- '' -}}

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="{{ locale_rfc5646 or 'en' }}" {% if rtl %} dir="rtl"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>{{ target_url }} — {{ _('Anonymous View') }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" sizes="any">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #e0e0e0; }
+    #proxy-toolbar {
+      height: 48px;
+      background: #1e1e1e;
+      border-bottom: 1px solid #333;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      gap: 12px;
+      font-size: 13px;
+    }
+    .toolbar-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .proxy-brand {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: #3b82f6;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .proxy-badge {
+      font-size: 11px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      padding: 2px 7px;
+      border-radius: 9999px;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .proxy-badge::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      background: #10b981;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .url-display {
+      flex: 1;
+      max-width: 640px;
+      background: #2a2a2a;
+      border: 1px solid #3c3c3c;
+      border-radius: 6px;
+      padding: 5px 12px;
+      color: #aaa;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .url-display span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: #ddd;
+    }
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid #444;
+      background: #2a2a2a;
+      color: #ccc;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .btn:hover {
+      background: #383838;
+      color: #fff;
+      border-color: #555;
+    }
+    .btn-toggle-js {
+      border-color: rgba(245, 158, 11, 0.4);
+      color: #f59e0b;
+      background: rgba(245, 158, 11, 0.1);
+    }
+    .btn-toggle-js:hover {
+      background: rgba(245, 158, 11, 0.2);
+    }
+    .btn-toggle-js.js-off {
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #10b981;
+      background: rgba(16, 185, 129, 0.1);
+    }
+    .btn-close {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #ef4444;
+    }
+    .btn-close:hover {
+      background: rgba(239, 68, 68, 0.25);
+      color: #ff6b6b;
+    }
+    #proxy-viewport {
+      width: 100%;
+      height: calc(100% - 48px);
+      position: relative;
+      background: #fff;
+    }
+    #proxy-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+    @media (max-width: 768px) {
+      .url-display { display: none; }
+      .proxy-badge { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <header id="proxy-toolbar">
+    <div class="toolbar-section">
+      <div class="proxy-brand">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>{{ _('Anonymous View') }}</span>
+      </div>
+      <span class="proxy-badge">{{ _('Protected') }}</span>
+    </div>
+
+    <div class="url-display" title="{{ target_url }}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+      <span>{{ target_url }}</span>
+    </div>
+
+    <div class="toolbar-actions">
+      <a class="btn btn-toggle-js {% if not js_enabled %}js-off{% endif %}" href="{{ toggle_js_url }}" title="{{ _('Toggle JavaScript execution in proxied view') }}">
+        {% if js_enabled %}
+          <span>⚡ JS: ON</span>
+        {% else %}
+          <span>🛡️ JS: OFF</span>
+        {% endif %}
+      </a>
+      <a class="btn" href="{{ target_url }}" target="_blank" rel="noopener noreferrer" title="{{ _('Open original website directly in a new tab') }}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" y1="14" x2="21" y2="3"/>
+        </svg>
+        <span>{{ _('Direct Link') }}</span>
+      </a>
+      <button class="btn btn-close" onclick="window.history.length > 1 ? window.history.back() : window.close();" title="{{ _('Close and go back') }}">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/>
+          <line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+        <span>{{ _('Exit') }}</span>
+      </button>
+    </div>
+  </header>
+
+  <main id="proxy-viewport">
+    <iframe id="proxy-iframe"
+            src="{{ page_url }}"
+            sandbox="allow-forms{% if js_enabled %} allow-scripts{% endif %}"
+            referrerpolicy="no-referrer">
+    </iframe>
+  </main>
+</body>
+</html>

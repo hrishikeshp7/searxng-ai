@@ -19,7 +19,9 @@ import urllib.parse
 from urllib.parse import urlencode, urlparse, unquote
 
 import warnings
-from curl_cffi.requests.exceptions import RequestException
+from curl_cffi.requests.exceptions import RequestException, Timeout
+
+from searx.web_proxy import is_safe_url, generate_proxy_token, verify_proxy_token, rewrite_html
 
 from pygments import highlight
 from pygments.lexers import get_lexer_by_name
@@ -320,8 +322,28 @@ def image_proxify(url: str):
     return '{0}?{1}'.format(url_for('image_proxy'), urlencode(dict(url=url.encode(), h=h)))
 
 
+def web_proxify(url: str):
+    if not url:
+        return url
+
+    if url.startswith('//'):
+        url = 'https:' + url
+
+    if not sxng_request.preferences.get_value('open_in_proxy'):
+        return url
+
+    token, ts = generate_proxy_token(settings['server']['secret_key'], url)
+    return '{0}?{1}'.format(
+        url_for('proxy_view'),
+        urlencode({'url': url, 'h': token, 't': ts}),
+    )
+
+
 def get_translations():
     return {
+        # proxy
+        'open_in_proxy': gettext('open in proxy'),
+        'proxy': gettext('proxy'),
         # when there is autocompletion
         'no_item_found': gettext('No item found'),
         # /preferences: the source of the engine description (wikipedata, wikidata, website)
@@ -438,6 +460,8 @@ def render(template_name: str, **kwargs):
     # helpers to create links to other pages
     kwargs['url_for'] = custom_url_for  # override url_for function in templates
     kwargs['image_proxify'] = image_proxify
+    kwargs['web_proxify'] = web_proxify
+    kwargs['open_in_proxy'] = sxng_request.preferences.get_value('open_in_proxy')
     kwargs['favicon_url'] = favicons.favicon_url
     kwargs['cache_url'] = settings['ui']['cache_url']
     kwargs['get_result_template'] = get_result_template
@@ -1065,6 +1089,201 @@ def image_proxy():
         return '', 400
 
 
+@app.route('/proxy/view', methods=['GET'])
+def proxy_view():
+    url = sxng_request.args.get('url', '').strip()
+    h = sxng_request.args.get('h', '')
+    t = sxng_request.args.get('t', '')
+    js = sxng_request.args.get('js', '1')
+
+    if not url or not h or not t:
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Invalid Request'),
+            error_msg=gettext('Missing required proxy parameters.'),
+        ), 400
+
+    if not verify_proxy_token(settings['server']['secret_key'], url, h, t):
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Forbidden'),
+            error_msg=gettext('Invalid or expired proxy signature. Only links from search results can be proxied.'),
+        ), 403
+
+    safe, err_msg = is_safe_url(url)
+    if not safe:
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Forbidden'),
+            error_msg=gettext('Access denied: ') + err_msg,
+        ), 403
+
+    page_url = url_for('proxy_page') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': js})
+    new_js = '0' if js == '1' else '1'
+    toggle_js_url = url_for('proxy_view') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': new_js})
+
+    return render(
+        'simple/proxy_view.html',
+        target_url=url,
+        page_url=page_url,
+        js_enabled=(js == '1'),
+        toggle_js_url=toggle_js_url,
+    )
+
+
+@app.route('/proxy/page', methods=['GET'])
+def proxy_page():
+    # pylint: disable=too-many-return-statements, too-many-branches, too-many-locals
+    url = sxng_request.args.get('url', '').strip()
+    h = sxng_request.args.get('h', '')
+    t = sxng_request.args.get('t', '')
+    js = sxng_request.args.get('js', '1')
+
+    if not url or not h or not t:
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Invalid Request'),
+            error_msg=gettext('Missing required proxy parameters.'),
+        ), 400
+
+    if not verify_proxy_token(settings['server']['secret_key'], url, h, t):
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Forbidden'),
+            error_msg=gettext('Invalid or expired proxy signature. Only links from search results can be proxied.'),
+        ), 403
+
+    safe, err_msg = is_safe_url(url)
+    if not safe:
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Forbidden'),
+            error_msg=gettext('Access denied: ') + err_msg,
+        ), 403
+
+    maximum_size = 5 * 1024 * 1024  # 5 MB memory safety cap for Heroku dyno
+    resp = None
+    stream = None
+    is_passthrough = False
+
+    def close_stream():
+        nonlocal resp, stream
+        try:
+            if resp:
+                resp.close()
+            del resp
+            del stream
+        except Exception as ex:
+            logger.debug('Exception while closing proxy response: %s', ex)
+
+    try:
+        request_headers = {
+            'User-Agent': gen_useragent(),
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': sxng_request.headers.get('Accept-Language', 'en-US,en;q=0.9'),
+            'Sec-GPC': '1',
+            'DNT': '1',
+        }
+        set_context_network_name('default')
+        resp, stream = http_stream(
+            method='GET',
+            url=url,
+            headers=request_headers,
+            allow_redirects=True,
+            timeout=12,
+        )
+
+        content_length = resp.headers.get('Content-Length')
+        if content_length and content_length.isdigit() and int(content_length) > maximum_size:
+            close_stream()
+            return render(
+                'simple/proxy_error.html',
+                error_title=gettext('Payload Too Large'),
+                error_msg=gettext('The requested resource exceeds the 5MB size limit.'),
+            ), 413
+
+        content_type = resp.headers.get('Content-Type', '')
+        is_html = 'text/html' in content_type or 'application/xhtml+xml' in content_type
+
+        if is_html:
+            chunks = []
+            total_bytes = 0
+            for chunk in stream:
+                total_bytes += len(chunk)
+                if total_bytes > maximum_size:
+                    close_stream()
+                    return render(
+                        'simple/proxy_error.html',
+                        error_title=gettext('Payload Too Large'),
+                        error_msg=gettext('The requested resource exceeds the 5MB size limit.'),
+                    ), 413
+                chunks.append(chunk)
+
+            raw_body = b''.join(chunks)
+            close_stream()
+
+            disable_scripts = (js == '0')
+            target_final_url = getattr(resp, 'url', None) or url
+            rewritten_html = rewrite_html(
+                html_content=raw_body,
+                target_url=target_final_url,
+                secret_key=settings['server']['secret_key'],
+                disable_scripts=disable_scripts,
+                proxy_url_prefix=url_for('proxy_view'),
+            )
+
+            response = Response(rewritten_html, mimetype='text/html', status=resp.status_code)
+            if disable_scripts:
+                response.headers['Content-Security-Policy'] = "sandbox allow-forms; default-src * 'unsafe-inline' data: blob:;"
+            else:
+                response.headers['Content-Security-Policy'] = "sandbox allow-scripts allow-forms; default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;"
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['Referrer-Policy'] = 'no-referrer'
+            return response
+        else:
+            is_passthrough = True
+            headers = dict_subset(resp.headers, {'Content-Type', 'Content-Encoding', 'Content-Length', 'Length'})
+            response = Response(
+                stream,
+                mimetype=content_type or 'application/octet-stream',
+                headers=headers,
+                direct_passthrough=True,
+                status=resp.status_code,
+            )
+            response.headers['Content-Security-Policy'] = "sandbox;"
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['Referrer-Policy'] = 'no-referrer'
+            response.call_on_close(close_stream)
+            return response
+
+    except Timeout:
+        if not is_passthrough:
+            close_stream()
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Gateway Timeout'),
+            error_msg=gettext('The target server did not respond within 12 seconds.'),
+        ), 504
+    except RequestException as e:
+        if not is_passthrough:
+            close_stream()
+        logger.warning('Proxy connection error: %s', e)
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Bad Gateway'),
+            error_msg=gettext('Could not connect to target server.'),
+        ), 502
+    except Exception as e:
+        if not is_passthrough:
+            close_stream()
+        logger.exception('Proxy internal error: %s', e)
+        return render(
+            'simple/proxy_error.html',
+            error_title=gettext('Proxy Error'),
+            error_msg=gettext('An unexpected error occurred while proxying the page.'),
+        ), 500
+
+
 @app.route('/engine_descriptions.json', methods=['GET'])
 def engine_descriptions():
     sxng_ui_lang_tag = get_locale().replace("_", "-")
@@ -1180,6 +1399,7 @@ def robots():
 Allow: /info/en/about
 Disallow: /stats
 Disallow: /image_proxy
+Disallow: /proxy/
 Disallow: /preferences
 Disallow: /*?*q=*
 """,

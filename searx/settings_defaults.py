@@ -219,6 +219,7 @@ SCHEMA: dict[str, t.Any] = {
         'secret_key': SettingsValue(str, environ_name='SEARXNG_SECRET'),
         'base_url': SettingsValue((False, str), False, 'SEARXNG_BASE_URL'),
         'image_proxy': SettingsValue(bool, False, 'SEARXNG_IMAGE_PROXY'),
+        'open_in_proxy': SettingsValue(bool, True, 'SEARXNG_OPEN_IN_PROXY'),
         'http_protocol_version': SettingsValue(('1.0', '1.1'), '1.0'),
         'method': SettingsValue(('POST', 'GET'), 'GET', 'SEARXNG_METHOD'),
         'default_http_headers': SettingsValue(dict, {}),

@@ -434,6 +434,10 @@ class Preferences:
                 get_setting("server.image_proxy"),
                 locked="image_proxy" in self.cfg.lock,
             ),
+            'open_in_proxy': BooleanSetting(
+                get_setting("server.open_in_proxy"),
+                locked="open_in_proxy" in self.cfg.lock,
+            ),
             'method': EnumStringSetting(
                 get_setting("server.method"),
                 locked="method" in self.cfg.lock,

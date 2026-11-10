@@ -224,6 +224,9 @@
     {%- if 'image_proxy' not in locked_preferences -%}
       {%- include 'simple/preferences/image_proxy.html' -%}
     {%- endif -%}
+    {%- if 'open_in_proxy' not in locked_preferences -%}
+      {%- include 'simple/preferences/open_in_proxy.html' -%}
+    {%- endif -%}
     {%- if 'query_in_title' not in locked_preferences -%}
       {%- include 'simple/preferences/query_in_title.html' -%}
     {%- endif -%}

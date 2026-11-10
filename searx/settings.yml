@@ -105,6 +105,8 @@ server:
   secret_key: "ultrasecretkey"  # Is overwritten by ${SEARXNG_SECRET}
   # Proxy image results through SearXNG. Is overwritten by ${SEARXNG_IMAGE_PROXY}
   image_proxy: false
+  # Open in proxy (Anonymous View) for search results. Is overwritten by ${SEARXNG_OPEN_IN_PROXY}
+  open_in_proxy: true
   # 1.0 and 1.1 are supported
   http_protocol_version: "1.0"
   # POST keeps search queries out of the browsers history, but causes UX issues.

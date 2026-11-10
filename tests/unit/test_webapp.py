@@ -9,6 +9,7 @@ import searx.webapp
 import searx.search
 import searx.search.processors
 from searx.result_types._base import MainResult
+from searx.web_proxy import generate_proxy_token
 
 from searx.results import Timing
 from searx.preferences import Preferences
@@ -224,6 +225,43 @@ class ViewsTestCase(SearxTestCase):  # pylint: disable=too-many-public-methods
         result = self.client.get('/robots.txt')
         self.assertEqual(result.status_code, 200)
         self.assertIn(b'Allow: /', result.data)
+        self.assertIn(b'Disallow: /proxy/', result.data)
+
+    def test_proxy_view_missing_params(self):
+        result = self.client.get('/proxy/view')
+        self.assertEqual(result.status_code, 400)
+
+    def test_proxy_view_invalid_token(self):
+        result = self.client.get('/proxy/view?url=https://example.com&h=invalid&t=123456789')
+        self.assertEqual(result.status_code, 403)
+
+    def test_proxy_view_ssrf_blocked(self):
+        url = 'http://127.0.0.1:8080/secret'
+        token, ts = generate_proxy_token(searx.webapp.settings['server']['secret_key'], url)
+        result = self.client.get(f'/proxy/view?url={url}&h={token}&t={ts}')
+        self.assertEqual(result.status_code, 403)
+
+    def test_proxy_view_success(self):
+        url = 'https://example.com/article'
+        token, ts = generate_proxy_token(searx.webapp.settings['server']['secret_key'], url)
+        result = self.client.get(f'/proxy/view?url={url}&h={token}&t={ts}')
+        self.assertEqual(result.status_code, 200)
+        self.assertIn(b'id="proxy-iframe"', result.data)
+        self.assertIn(b'Anonymous View', result.data)
+
+    def test_proxy_page_missing_params(self):
+        result = self.client.get('/proxy/page')
+        self.assertEqual(result.status_code, 400)
+
+    def test_proxy_page_invalid_token(self):
+        result = self.client.get('/proxy/page?url=https://example.com&h=invalid&t=123456789')
+        self.assertEqual(result.status_code, 403)
+
+    def test_proxy_page_ssrf_blocked(self):
+        url = 'http://169.254.169.254/latest/meta-data'
+        token, ts = generate_proxy_token(searx.webapp.settings['server']['secret_key'], url)
+        result = self.client.get(f'/proxy/page?url={url}&h={token}&t={ts}')
+        self.assertEqual(result.status_code, 403)
 
     def test_opensearch_xml(self):
         result = self.client.get('/opensearch.xml')

@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="{{ locale_rfc5646 or 'en' }}" {% if rtl %} dir="rtl"{% endif %}>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ error_title }} — {{ _('Proxy Error') }}</title>
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.png') }}" sizes="any">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #181818;
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .error-card {
+      background: #242424;
+      border: 1px solid #383838;
+      border-radius: 8px;
+      max-width: 480px;
+      width: 100%;
+      padding: 30px;
+      text-align: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+    .error-icon {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      color: #ef4444;
+      display: inline-block;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      color: #f87171;
+    }
+    p {
+      color: #aaa;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+    .btn {
+      display: inline-block;
+      padding: 8px 18px;
+      background: #3b82f6;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: 500;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover { background: #2563eb; }
+  </style>
+</head>
+<body>
+  <div class="error-card">
+    <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+    <h1>{{ error_title }}</h1>
+    <p>{{ error_msg }}</p>
+    <button class="btn" onclick="window.history.length > 1 ? window.history.back() : window.location.href='/'">{{ _('Go Back') }}</button>
+  </div>
+</body>
+</html>

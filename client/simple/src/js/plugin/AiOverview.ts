@@ -51,6 +51,8 @@ export default class AiOverview extends Plugin {
   }
 
   protected async run(): Promise<Result | undefined> {
+    this.updateGlobalTokenCounter();
+
     const element = document.querySelector<HTMLElement>("[data-ai-overview]");
     if (!element) return;
 
@@ -125,16 +127,9 @@ export default class AiOverview extends Plugin {
     this.setupTokenMonitor(element, usage);
   }
 
-  private setupTokenMonitor(element: HTMLElement, usage?: UsageItem): void {
-    if (!usage?.total_tokens) return;
-
-    const actions = element.querySelector<HTMLElement>(".ai-overview-actions");
-    if (!actions || actions.querySelector(".ai-overview-token-badge")) return;
-
+  private getStoredTokenStats(): { date: string; prompt: number; completion: number; total: number; count: number } {
     const today = new Date().toISOString().slice(0, 10);
     const storageKey = "sxng_ai_token_stats";
-    const dailyLimit = 200_000;
-
     let stats = {
       date: today,
       prompt: 0,
@@ -160,6 +155,77 @@ export default class AiOverview extends Plugin {
     } catch (e) {
       console.warn("[ai_overview] Failed to read token stats", e);
     }
+    return stats;
+  }
+
+  private formatK(n: number): string {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
+    return n.toString();
+  }
+
+  private updateGlobalTokenCounter(stats?: { total: number; count: number; prompt: number; completion: number }): void {
+    const nav = document.querySelector<HTMLElement>("#links_on_top");
+    if (!nav) return;
+
+    const currentStats = stats ?? this.getStoredTokenStats();
+    if (currentStats.total <= 0) return;
+
+    const dailyLimit = 200_000;
+    const pct = Math.min(100, Math.round((currentStats.total / dailyLimit) * 100));
+    const remaining = Math.max(0, dailyLimit - currentStats.total);
+
+    let pill = document.querySelector<HTMLElement>("#ai-token-global");
+    if (!pill) {
+      pill = document.createElement("div");
+      pill.id = "ai-token-global";
+      nav.prepend(pill);
+    }
+
+    pill.className = "ai-token-global";
+    if (pct >= 95) {
+      pill.classList.add("danger");
+    } else if (pct >= 80) {
+      pill.classList.add("warning");
+    }
+
+    pill.title = [
+      `Today: ${currentStats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%)`,
+      `${remaining.toLocaleString()} tokens left · ${currentStats.count} search${currentStats.count === 1 ? "" : "es"}`
+    ].join("\n");
+
+    pill.innerHTML = "";
+
+    const icon = document.createElement("span");
+    icon.className = "ai-token-global-icon";
+    icon.textContent = "⚡";
+
+    const text = document.createElement("span");
+    text.className = "ai-token-global-text";
+
+    const count = document.createElement("span");
+    count.className = "ai-token-global-count";
+    count.textContent = this.formatK(currentStats.total);
+
+    const limit = document.createElement("span");
+    limit.className = "ai-token-global-limit";
+    limit.textContent = `/${this.formatK(dailyLimit)}`;
+
+    text.appendChild(count);
+    text.appendChild(limit);
+
+    pill.appendChild(icon);
+    pill.appendChild(text);
+  }
+
+  private setupTokenMonitor(element: HTMLElement, usage?: UsageItem): void {
+    if (!usage?.total_tokens) return;
+
+    const actions = element.querySelector<HTMLElement>(".ai-overview-actions");
+    if (!actions || actions.querySelector(".ai-overview-token-badge")) return;
+
+    const storageKey = "sxng_ai_token_stats";
+    const stats = this.getStoredTokenStats();
 
     const currentTotal = usage.total_tokens || 0;
     const currentPrompt = usage.prompt_tokens || 0;
@@ -176,27 +242,10 @@ export default class AiOverview extends Plugin {
       console.warn("[ai_overview] Failed to save token stats", e);
     }
 
-    const formatK = (n: number) => {
-      if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-      if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-      return n.toString();
-    };
-
-    const pct = Math.min(100, Math.round((stats.total / dailyLimit) * 100));
-    const remaining = Math.max(0, dailyLimit - stats.total);
-
+    // Badge inside AI overview: current search only
     const badge = document.createElement("div");
     badge.className = "ai-overview-token-badge";
-    if (pct >= 95) {
-      badge.classList.add("danger");
-    } else if (pct >= 80) {
-      badge.classList.add("warning");
-    }
-
-    badge.title = [
-      `Search: ${currentPrompt.toLocaleString()} in · ${currentCompletion.toLocaleString()} out (${currentTotal.toLocaleString()} tokens)`,
-      `Today: ${stats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%, ${remaining.toLocaleString()} left across ${stats.count} searches)`
-    ].join("\n");
+    badge.title = `Current overview: ${currentPrompt.toLocaleString()} in · ${currentCompletion.toLocaleString()} out (${currentTotal.toLocaleString()} tokens)`;
 
     const icon = document.createElement("span");
     icon.className = "token-icon";
@@ -204,12 +253,14 @@ export default class AiOverview extends Plugin {
 
     const text = document.createElement("span");
     text.className = "token-text";
-    text.textContent = `${formatK(currentTotal)} · ${formatK(stats.total)}/${formatK(dailyLimit)} (${pct}%)`;
+    text.textContent = `${this.formatK(currentTotal)} tokens`;
 
     badge.appendChild(icon);
     badge.appendChild(text);
-
     actions.prepend(badge);
+
+    // Global daily counter in the top-right nav
+    this.updateGlobalTokenCounter(stats);
   }
 
   private setupThumbnails(element: HTMLElement, thumbnails: ThumbnailItem[]): void {

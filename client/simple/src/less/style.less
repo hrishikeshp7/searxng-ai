@@ -223,7 +223,8 @@ article[data-vim-selected].category-social {
   }
 
   .cache_link,
-  .proxyfied_link {
+  .proxyfied_link,
+  .proxy_link {
     font-size: smaller !important;
     margin-left: 0.5rem;
   }
@@ -1418,6 +1419,50 @@ summary.title {
   font-size: 1em;
   color: var(--color-search-font);
 
+  #ai-token-global {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-family: var(--font-monospace, monospace);
+    padding: 0.2rem 0.5rem;
+    .rounded-corners(0.35rem);
+    background: rgb(var(--color-ai-overview-accent-rgb) / 8%);
+    border: 1px solid rgb(var(--color-ai-overview-accent-rgb) / 20%);
+    color: var(--color-search-font);
+    cursor: help;
+    user-select: none;
+    line-height: 1.2;
+    transition: all 0.15s ease;
+
+    span {
+      display: inline !important;
+    }
+
+    &:hover {
+      background: rgb(var(--color-ai-overview-accent-rgb) / 15%);
+      border-color: rgb(var(--color-ai-overview-accent-rgb) / 35%);
+    }
+
+    .ai-token-global-icon {
+      font-size: 0.8rem;
+      line-height: 1;
+    }
+
+    &.warning {
+      border-color: #f59e0b;
+      color: #f59e0b;
+      background: rgb(245 158 11 / 12%);
+    }
+
+    &.danger {
+      border-color: #ef4444;
+      color: #ef4444;
+      background: rgb(239 68 68 / 15%);
+    }
+  }
+
   a {
     display: flex;
     align-items: center;
@@ -1683,6 +1728,15 @@ summary.title {
   #links_on_top {
     top: 1.4rem;
     .ltr-right(10px);
+
+    #ai-token-global {
+      font-size: 0.7rem;
+      padding: 0.15rem 0.35rem;
+
+      .ai-token-global-limit {
+        display: none !important;
+      }
+    }
   }
 
   #main_index #links_on_top {

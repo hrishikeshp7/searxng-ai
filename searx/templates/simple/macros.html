@@ -61,6 +61,9 @@
 <div class="engines">
   {% for engine in result.engines %}<span>{{ engine }}</span>{% endfor %}
   {{ icon_small('ellipsis-vertical') + result_link(cache_url + result.url, _('cached'), "cache_link") }}
+  {%- if open_in_proxy and result.url -%}
+  {{ icon_small('ellipsis-vertical') + result_link(web_proxify(result.url), _('open in proxy'), "proxy_link") }}
+  {%- endif -%}
 </div>{{- '' -}}
 <div class="break"></div>{{- '' -}}
 {%- endmacro -%}
