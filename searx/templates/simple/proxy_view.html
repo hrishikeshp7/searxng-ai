@@ -11,7 +11,7 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body, html { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background: #121212; color: #e0e0e0; }
     #proxy-toolbar {
-      height: 48px;
+      height: 50px;
       background: #1e1e1e;
       border-bottom: 1px solid #333;
       display: flex;
@@ -25,6 +25,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-shrink: 0;
     }
     .proxy-brand {
       display: flex;
@@ -81,15 +82,18 @@
     .toolbar-actions {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 10px;
+      flex-shrink: 0;
     }
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 5px 10px;
-      border-radius: 5px;
-      font-size: 12px;
+      justify-content: center;
+      gap: 7px;
+      min-height: 36px;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 13px;
       font-weight: 500;
       text-decoration: none;
       cursor: pointer;
@@ -98,11 +102,16 @@
       color: #ccc;
       transition: all 0.15s ease;
       white-space: nowrap;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn:hover {
       background: #383838;
       color: #fff;
       border-color: #555;
+    }
+    .btn svg {
+      flex-shrink: 0;
     }
     .btn-toggle-js {
       border-color: rgba(245, 158, 11, 0.4);
@@ -117,10 +126,26 @@
       color: #10b981;
       background: rgba(16, 185, 129, 0.1);
     }
+    .btn-direct {
+      background: #2563eb;
+      border-color: #3b82f6;
+      color: #ffffff;
+      font-weight: 600;
+      padding: 6px 16px;
+      margin: 0 4px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    .btn-direct:hover {
+      background: #1d4ed8;
+      border-color: #60a5fa;
+      color: #ffffff;
+    }
     .btn-close {
       background: rgba(239, 68, 68, 0.15);
       border-color: rgba(239, 68, 68, 0.3);
       color: #ef4444;
+      flex-shrink: 0;
+      margin-left: 2px;
     }
     .btn-close:hover {
       background: rgba(239, 68, 68, 0.25);
@@ -128,7 +153,7 @@
     }
     #proxy-viewport {
       width: 100%;
-      height: calc(100% - 48px);
+      height: calc(100% - 50px);
       position: relative;
       background: #fff;
     }
@@ -144,25 +169,23 @@
     }
     @media (max-width: 600px) {
       #proxy-toolbar {
-        padding: 0 8px;
-        gap: 6px;
+        padding: 0 10px;
+        gap: 8px;
       }
       .proxy-brand span {
         display: none;
       }
       .toolbar-actions {
-        gap: 5px;
-        flex-shrink: 0;
+        gap: 8px;
       }
       .btn {
-        padding: 5px 7px;
-        font-size: 11px;
+        min-height: 34px;
+        padding: 6px 11px;
+        font-size: 12px;
       }
-      .btn-direct span {
-        display: none;
-      }
-      .btn-close {
-        flex-shrink: 0;
+      .btn-direct {
+        padding: 6px 14px;
+        margin: 0 3px;
       }
     }
   </style>
@@ -196,7 +219,7 @@
         {% endif %}
       </a>
       <a class="btn btn-direct" href="{{ target_url }}" target="_blank" rel="noopener noreferrer" title="{{ _('Open original website directly in a new tab') }}">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
           <polyline points="15 3 21 3 21 9"/>
           <line x1="10" y1="14" x2="21" y2="3"/>
@@ -204,7 +227,7 @@
         <span>{{ _('Direct Link') }}</span>
       </a>
       <button class="btn btn-close" onclick="window.history.length > 1 ? window.history.back() : window.close();" title="{{ _('Close and go back') }}">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <line x1="18" y1="6" x2="6" y2="18"/>
           <line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
