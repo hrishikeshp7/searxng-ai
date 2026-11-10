@@ -1167,12 +1167,10 @@ def proxy_page():
     is_passthrough = False
 
     def close_stream():
-        nonlocal resp, stream
+        nonlocal resp
         try:
             if resp:
                 resp.close()
-            del resp
-            del stream
         except Exception as ex:
             logger.debug('Exception while closing proxy response: %s', ex)
 
@@ -1220,10 +1218,11 @@ def proxy_page():
                 chunks.append(chunk)
 
             raw_body = b''.join(chunks)
+            target_final_url = getattr(resp, 'url', None) or url
+            status_code = resp.status_code
             close_stream()
 
             disable_scripts = (js == '0')
-            target_final_url = getattr(resp, 'url', None) or url
             rewritten_html = rewrite_html(
                 html_content=raw_body,
                 target_url=target_final_url,
@@ -1232,7 +1231,7 @@ def proxy_page():
                 proxy_url_prefix=url_for('proxy_view'),
             )
 
-            response = Response(rewritten_html, mimetype='text/html', status=resp.status_code)
+            response = Response(rewritten_html, mimetype='text/html', status=status_code)
             if disable_scripts:
                 response.headers['Content-Security-Policy'] = "sandbox allow-forms; default-src * 'unsafe-inline' data: blob:;"
             else:
