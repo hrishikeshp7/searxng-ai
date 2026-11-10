@@ -7,6 +7,7 @@ Provides SSRF protection, HMAC signature verification for Heroku AUP compliance
 
 from __future__ import annotations
 
+import gzip
 import hashlib
 import hmac
 import ipaddress
@@ -14,6 +15,7 @@ import logging
 import socket
 import time
 import urllib.parse
+import zlib
 from lxml import html
 
 logger = logging.getLogger('searx.web_proxy')
@@ -124,16 +126,47 @@ def verify_proxy_token(
     return hmac.compare_digest(token, expected)
 
 
+def decompress_body(raw_bytes: bytes, encoding: str = "") -> bytes:
+    """Decompress raw bytes if gzipped, deflated, or brotli-compressed."""
+    if not raw_bytes:
+        return raw_bytes
+    encoding = (encoding or "").lower()
+    if "gzip" in encoding or raw_bytes.startswith(b"\x1f\x8b"):
+        try:
+            return gzip.decompress(raw_bytes)
+        except Exception:
+            pass
+    if "deflate" in encoding:
+        try:
+            return zlib.decompress(raw_bytes)
+        except Exception:
+            try:
+                return zlib.decompress(raw_bytes, -zlib.MAX_WBITS)
+            except Exception:
+                pass
+    if "br" in encoding:
+        try:
+            import brotli  # pylint: disable=import-outside-toplevel
+            return brotli.decompress(raw_bytes)
+        except Exception:
+            pass
+    return raw_bytes
+
+
 def rewrite_html(
     html_content: str | bytes,
     target_url: str,
     secret_key: str | bytes,
     disable_scripts: bool = False,
     proxy_url_prefix: str = "/proxy/view",
+    content_encoding: str = "",
 ) -> bytes:
     """Rewrite HTML content to pass links through proxy and sandbox iframe securely."""
     if not html_content:
         return b""
+
+    if isinstance(html_content, bytes):
+        html_content = decompress_body(html_content, encoding=content_encoding)
 
     try:
         if isinstance(html_content, bytes):

@@ -141,6 +141,19 @@ class WebProxyTestCase(unittest.TestCase):
         self.assertNotIn('top.location', output_str)
         self.assertIn('console.log("legitimate")', output_str)
 
+    def test_rewrite_html_gzipped_content(self):
+        import gzip
+
+        key = 'test_secret'
+        target_url = 'https://example.com/'
+        raw = b'<html><head><title>Gzip</title></head><body><a href="/link">Test</a></body></html>'
+        gzipped = gzip.compress(raw)
+
+        output = rewrite_html(gzipped, target_url, key, content_encoding='gzip')
+        output_str = output.decode('utf-8')
+        self.assertIn('<base href="https://example.com/"', output_str)
+        self.assertIn('/proxy/view?url=https%3A%2F%2Fexample.com%2Flink', output_str)
+
 
 if __name__ == '__main__':
     unittest.main()

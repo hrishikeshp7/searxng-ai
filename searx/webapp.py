@@ -1223,12 +1223,14 @@ def proxy_page():
             close_stream()
 
             disable_scripts = (js == '0')
+            content_encoding = resp.headers.get('Content-Encoding', '')
             rewritten_html = rewrite_html(
                 html_content=raw_body,
                 target_url=target_final_url,
                 secret_key=settings['server']['secret_key'],
                 disable_scripts=disable_scripts,
                 proxy_url_prefix=url_for('proxy_view'),
+                content_encoding=content_encoding,
             )
 
             response = Response(rewritten_html, mimetype='text/html', status=status_code)
