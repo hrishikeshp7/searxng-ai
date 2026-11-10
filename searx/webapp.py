@@ -1179,6 +1179,7 @@ def proxy_page():
             'User-Agent': gen_useragent(),
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
             'Accept-Language': sxng_request.headers.get('Accept-Language', 'en-US,en;q=0.9'),
+            'Accept-Encoding': 'gzip, deflate',
             'Sec-GPC': '1',
             'DNT': '1',
         }
@@ -1189,6 +1190,7 @@ def proxy_page():
             headers=request_headers,
             allow_redirects=True,
             timeout=12,
+            accept_encoding='',
         )
 
         content_length = resp.headers.get('Content-Length')
