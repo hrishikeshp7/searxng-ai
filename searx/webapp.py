@@ -1161,7 +1161,8 @@ def proxy_page():
             error_msg=gettext('Access denied: ') + err_msg,
         ), 403
 
-    maximum_size = 5 * 1024 * 1024  # 5 MB memory safety cap for Heroku dyno
+    max_html_size = settings['server'].get('proxy_max_html_size', 50 * 1024 * 1024)
+    max_stream_size = settings['server'].get('proxy_max_stream_size', 200 * 1024 * 1024)
     resp = None
     stream = None
     is_passthrough = False
@@ -1189,33 +1190,36 @@ def proxy_page():
             url=url,
             headers=request_headers,
             allow_redirects=True,
-            timeout=12,
+            timeout=20,
             accept_encoding='',
         )
 
+        content_type = resp.headers.get('Content-Type', '')
+        is_html = 'text/html' in content_type or 'application/xhtml+xml' in content_type
+        applicable_max_size = max_html_size if is_html else max_stream_size
+
         content_length = resp.headers.get('Content-Length')
-        if content_length and content_length.isdigit() and int(content_length) > maximum_size:
+        if content_length and content_length.isdigit() and int(content_length) > applicable_max_size:
             close_stream()
+            limit_mb = applicable_max_size // (1024 * 1024)
             return render(
                 'proxy_error.html',
                 error_title=gettext('Payload Too Large'),
-                error_msg=gettext('The requested resource exceeds the 5MB size limit.'),
+                error_msg=gettext(f'The requested resource exceeds the {limit_mb}MB limit.'),
             ), 413
-
-        content_type = resp.headers.get('Content-Type', '')
-        is_html = 'text/html' in content_type or 'application/xhtml+xml' in content_type
 
         if is_html:
             chunks = []
             total_bytes = 0
             for chunk in stream:
                 total_bytes += len(chunk)
-                if total_bytes > maximum_size:
+                if total_bytes > max_html_size:
                     close_stream()
+                    limit_mb = max_html_size // (1024 * 1024)
                     return render(
                         'proxy_error.html',
                         error_title=gettext('Payload Too Large'),
-                        error_msg=gettext('The requested resource exceeds the 5MB size limit.'),
+                        error_msg=gettext(f'The requested resource exceeds the {limit_mb}MB limit.'),
                     ), 413
                 chunks.append(chunk)
 

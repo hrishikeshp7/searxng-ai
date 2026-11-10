@@ -220,6 +220,8 @@ SCHEMA: dict[str, t.Any] = {
         'base_url': SettingsValue((False, str), False, 'SEARXNG_BASE_URL'),
         'image_proxy': SettingsValue(bool, False, 'SEARXNG_IMAGE_PROXY'),
         'open_in_proxy': SettingsValue(bool, True, 'SEARXNG_OPEN_IN_PROXY'),
+        'proxy_max_html_size': SettingsValue(int, 50 * 1024 * 1024, 'SEARXNG_PROXY_MAX_HTML_SIZE'),
+        'proxy_max_stream_size': SettingsValue(int, 200 * 1024 * 1024, 'SEARXNG_PROXY_MAX_STREAM_SIZE'),
         'http_protocol_version': SettingsValue(('1.0', '1.1'), '1.0'),
         'method': SettingsValue(('POST', 'GET'), 'GET', 'SEARXNG_METHOD'),
         'default_http_headers': SettingsValue(dict, {}),

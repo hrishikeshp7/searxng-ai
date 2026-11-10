@@ -107,6 +107,8 @@ server:
   image_proxy: false
   # Open in proxy (Anonymous View) for search results. Is overwritten by ${SEARXNG_OPEN_IN_PROXY}
   open_in_proxy: true
+  proxy_max_html_size: 52428800    # 50 MB
+  proxy_max_stream_size: 209715200 # 200 MB
   # 1.0 and 1.1 are supported
   http_protocol_version: "1.0"
   # POST keeps search queries out of the browsers history, but causes UX issues.
