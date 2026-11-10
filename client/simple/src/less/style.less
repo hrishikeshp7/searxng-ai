@@ -1164,6 +1164,20 @@ summary.title {
       }
     }
 
+    .ai-overview-streaming-text {
+      white-space: pre-wrap;
+      line-height: 1.6;
+
+      &::after {
+        content: "▋";
+        display: inline-block;
+        color: var(--color-ai-overview-accent);
+        animation: ai-cursor-blink 0.8s infinite;
+        margin-left: 0.15rem;
+        vertical-align: baseline;
+      }
+    }
+
     .ai-overview-error {
       display: flex;
       align-items: center;

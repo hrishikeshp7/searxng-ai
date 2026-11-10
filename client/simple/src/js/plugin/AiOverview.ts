@@ -85,9 +85,15 @@ export default class AiOverview extends Plugin {
 
     try {
       const res = await http("POST", url, {
-        body: new URLSearchParams({ payload: payload, sig: sig }),
-        timeout: 60_000
+        body: new URLSearchParams({ payload: payload, sig: sig, stream: "true" }),
+        timeout: 90_000
       });
+
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("text/event-stream") && res.body) {
+        return await this.streamOverview(element, res);
+      }
+
       const data = (await res.json()) as ApiResponse;
       if (!data.html) return { element: element, error: true };
       return {
@@ -102,6 +108,83 @@ export default class AiOverview extends Plugin {
       console.error("[ai_overview]", error);
       return { element: element, error: true };
     }
+  }
+
+  private async streamOverview(element: HTMLElement, res: Response): Promise<Result> {
+    const content = element.querySelector<HTMLElement>(".ai-overview-content");
+    if (!content) return { element: element, error: true };
+
+    const reader = res.body?.getReader();
+    if (!reader) return { element: element, error: true };
+
+    const decoder = new TextDecoder("utf-8");
+    let buffer = "";
+    let accumulatedText = "";
+    let streamTextEl: HTMLElement | null = null;
+    let finalResult: ApiResponse | null = null;
+
+    try {
+      while (true) {
+        // biome-ignore lint/performance/noAwaitInLoops: sequential stream read
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith(":")) continue;
+
+          if (trimmed.startsWith("data: ")) {
+            const dataStr = trimmed.slice(6).trim();
+            if (dataStr === "[DONE]") break;
+
+            try {
+              const parsed = JSON.parse(dataStr) as ApiResponse & { delta?: string; done?: boolean };
+              if (parsed.error) {
+                return { element: element, error: true };
+              }
+
+              if (parsed.delta) {
+                if (!streamTextEl) {
+                  content.classList.remove("ai-overview-loading");
+                  content.innerHTML = '<div class="ai-overview-streaming-text"></div>';
+                  streamTextEl = content.querySelector(".ai-overview-streaming-text");
+                }
+                accumulatedText += parsed.delta;
+                if (streamTextEl) {
+                  streamTextEl.textContent = accumulatedText;
+                }
+              }
+
+              if (parsed.done) {
+                finalResult = parsed;
+              }
+            } catch {
+              // ignore partial json
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[ai_overview] stream read error", error);
+      return { element: element, error: true };
+    }
+
+    if (finalResult?.html) {
+      return {
+        element: element,
+        html: finalResult.html,
+        sources: finalResult.sources,
+        thumbnails: finalResult.thumbnails,
+        related: finalResult.related,
+        usage: finalResult.usage
+      };
+    }
+
+    return { element: element, error: true };
   }
 
   protected async post({ element, html, sources, thumbnails, related, usage, error }: Result): Promise<void> {

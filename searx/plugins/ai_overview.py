@@ -27,6 +27,7 @@ import re
 import time
 import typing as t
 from html import escape
+from queue import SimpleQueue
 from urllib.parse import quote, urlsplit
 
 import flask
@@ -36,6 +37,7 @@ from werkzeug.exceptions import BadRequest, Forbidden, ServiceUnavailable
 
 from searx import get_setting
 from searx.extended_types import sxng_request
+from searx.network import stream_chunk_to_queue
 from searx.network.client import get_loop
 from searx.network.network import Network
 from searx.result_types.answer import BaseAnswer
@@ -288,6 +290,66 @@ def _post_json(url: str, *, json_body: dict, headers: dict, timeout: float) -> d
     return resp.json()
 
 
+def _stream_post_sse(url: str, *, json_body: dict, headers: dict, timeout: float) -> t.Generator[dict, None, None]:
+    net = _get_network(url)
+    queue: SimpleQueue = SimpleQueue()
+    kwargs = {
+        "json": json_body,
+        "headers": headers,
+        "timeout": timeout,
+        "accept_encoding": "",
+    }
+    future = asyncio.run_coroutine_threadsafe(
+        stream_chunk_to_queue(net, queue, "post", url, **kwargs),
+        get_loop(),
+    )
+    first = queue.get()
+    if isinstance(first, Exception):
+        raise first
+    resp = first
+    if resp.status_code >= 400:
+        err_chunks: list[bytes] = []
+        while True:
+            c = queue.get()
+            if c is None:
+                break
+            if isinstance(c, bytes):
+                err_chunks.append(c)
+        err_msg = b"".join(err_chunks).decode("utf-8", errors="replace")
+        raise RuntimeError(f"HTTP {resp.status_code}: {err_msg}")
+
+    buffer = ""
+    done_seen = False
+    try:
+        while True:
+            chunk = queue.get()
+            if chunk is None:
+                break
+            if isinstance(chunk, Exception):
+                raise chunk
+            if done_seen:
+                continue
+            buffer += chunk.decode("utf-8", errors="replace")
+            while "\n" in buffer:
+                line, buffer = buffer.split("\n", 1)
+                line = line.strip()
+                if not line or line.startswith(":"):
+                    continue
+                if line.startswith("data: "):
+                    data_str = line[6:].strip()
+                    if data_str == "[DONE]":
+                        done_seen = True
+                        break
+                    try:
+                        payload = json.loads(data_str)
+                    except Exception:
+                        continue
+                    yield payload
+    finally:
+        if not future.done():
+            future.cancel()
+
+
 def _build_prompt(query: str, sources: list[dict[str, str]]) -> str:
     parts = [f"Query: {query}", "", "Sources:"]
     for i, src in enumerate(sources, start=1):
@@ -344,6 +406,51 @@ def _format_citations(html: str, sources: list[dict[str, str]]) -> str:
     return re.sub(r"(\[|【)(\d+)(?:[^\]】]*)?(\]|】)", _replace_citation, html)
 
 
+def _build_overview_response(
+    answer_raw: str,
+    sources: list[dict[str, str]],
+    thumbnails: list[dict[str, str]],
+    usage: dict[str, int],
+) -> dict[str, t.Any]:
+    answer_raw = str(answer_raw).strip()
+    related_queries: list[str] = []
+
+    related_match = re.search(
+        r"(?:^|\n)\s*(?:Related|Follow[- ]up|Suggestions?)\s*:\s*(.+)$",
+        answer_raw,
+        re.IGNORECASE,
+    )
+    if related_match:
+        related_line = related_match.group(1).strip()
+        answer_raw = answer_raw[: related_match.start()].strip()
+        parts = [q.strip(" \t\n\r*-\"'\u2022") for q in re.split(r"\|", related_line)]
+        for part in parts:
+            if 3 <= len(part) <= 80:
+                related_queries.append(part)
+        related_queries = related_queries[:3]
+
+    html = _markdown.render(answer_raw)
+    html = _format_citations(html, sources) + _sources_html(sources)
+
+    enhanced_sources = [
+        {
+            "title": src.get("title", ""),
+            "url": _text_fragment_url(src.get("url", ""), src.get("content", "")),
+            "content": src.get("content", ""),
+            "domain": _extract_domain(src.get("url", "")),
+        }
+        for src in sources
+    ]
+
+    return {
+        "html": html,
+        "sources": enhanced_sources,
+        "thumbnails": thumbnails,
+        "related": related_queries,
+        "usage": usage,
+    }
+
+
 def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
     """View function for ``POST /ai_overview``, registered by :py:obj:`SXNGPlugin.init`."""
 
@@ -389,71 +496,89 @@ def ai_overview_endpoint() -> "flask.Response | tuple[flask.Response, int]":
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    try:
-        completion = _post_json(
-            f"{base_url}/chat/completions",
-            json_body={
-                "model": model,
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": _build_prompt(query, sources)},
-                ],
-                "max_tokens": max_tokens,
-                "temperature": 0.3,
-            },
-            headers=headers,
-            timeout=timeout,
-        )
-        answer_text = completion["choices"][0]["message"]["content"]
-        raw_usage = completion.get("usage") or {}
-        usage = {
-            "prompt_tokens": int(raw_usage.get("prompt_tokens", 0)),
-            "completion_tokens": int(raw_usage.get("completion_tokens", 0)),
-            "total_tokens": int(raw_usage.get("total_tokens", 0)),
-        }
-    except Exception:  # pylint: disable=broad-except
-        log.exception("request to the AI overview backend failed")
-        return flask.jsonify({"error": gettext("Could not generate an AI overview.")}), 502
+    prompt = _build_prompt(query, sources)
+    json_body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt},
+        ],
+        "max_tokens": max_tokens,
+        "temperature": 0.3,
+    }
 
-    answer_raw = str(answer_text).strip()
-    related_queries: list[str] = []
+    is_stream = sxng_request.form.get("stream", "true").lower() in ("true", "1")
 
-    related_match = re.search(
-        r"(?:^|\n)\s*(?:Related|Follow[- ]up|Suggestions?)\s*:\s*(.+)$",
-        answer_raw,
-        re.IGNORECASE,
-    )
-    if related_match:
-        related_line = related_match.group(1).strip()
-        answer_raw = answer_raw[: related_match.start()].strip()
-        parts = [q.strip(" \t\n\r*-\"'\u2022") for q in re.split(r"\|", related_line)]
-        for part in parts:
-            if 3 <= len(part) <= 80:
-                related_queries.append(part)
-        related_queries = related_queries[:3]
+    if not is_stream:
+        try:
+            completion = _post_json(
+                f"{base_url}/chat/completions",
+                json_body=json_body,
+                headers=headers,
+                timeout=timeout,
+            )
+            answer_text = completion["choices"][0]["message"]["content"]
+            raw_usage = completion.get("usage") or {}
+            usage = {
+                "prompt_tokens": int(raw_usage.get("prompt_tokens", 0)),
+                "completion_tokens": int(raw_usage.get("completion_tokens", 0)),
+                "total_tokens": int(raw_usage.get("total_tokens", 0)),
+            }
+            return flask.jsonify(_build_overview_response(answer_text, sources, thumbnails, usage))
+        except Exception:  # pylint: disable=broad-except
+            log.exception("request to the AI overview backend failed")
+            return flask.jsonify({"error": gettext("Could not generate an AI overview.")}), 502
 
-    html = _markdown.render(answer_raw)
-    html = _format_citations(html, sources) + _sources_html(sources)
+    def generate_sse():
+        full_text = ""
+        usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+        try:
+            stream_payload = {**json_body, "stream": True}
+            for chunk_data in _stream_post_sse(
+                f"{base_url}/chat/completions",
+                json_body=stream_payload,
+                headers=headers,
+                timeout=max(timeout, 45.0),
+            ):
+                choices = chunk_data.get("choices") or []
+                if choices:
+                    delta = choices[0].get("delta") or {}
+                    content = delta.get("content")
+                    if content:
+                        full_text += content
+                        yield f"data: {json.dumps({'delta': content})}\n\n"
+                if "usage" in chunk_data and chunk_data["usage"]:
+                    raw_u = chunk_data["usage"]
+                    usage = {
+                        "prompt_tokens": int(raw_u.get("prompt_tokens", 0)),
+                        "completion_tokens": int(raw_u.get("completion_tokens", 0)),
+                        "total_tokens": int(raw_u.get("total_tokens", 0)),
+                    }
 
-    enhanced_sources = [
-        {
-            "title": src.get("title", ""),
-            "url": _text_fragment_url(src.get("url", ""), src.get("content", "")),
-            "content": src.get("content", ""),
-            "domain": _extract_domain(src.get("url", "")),
-        }
-        for src in sources
-    ]
+            if not full_text.strip():
+                yield f"data: {json.dumps({'error': gettext('Could not generate an AI overview.')})}\n\n"
+                return
 
-    return flask.jsonify(
-        {
-            "html": html,
-            "sources": enhanced_sources,
-            "thumbnails": thumbnails,
-            "related": related_queries,
-            "usage": usage,
-        }
-    )
+            if usage["total_tokens"] == 0:
+                p_toks = max(1, len(prompt) // 4)
+                c_toks = max(1, len(full_text) // 4)
+                usage = {
+                    "prompt_tokens": p_toks,
+                    "completion_tokens": c_toks,
+                    "total_tokens": p_toks + c_toks,
+                }
+
+            result_data = _build_overview_response(full_text, sources, thumbnails, usage)
+            result_data["done"] = True
+            yield f"data: {json.dumps(result_data)}\n\n"
+        except Exception:  # pylint: disable=broad-except
+            log.exception("streaming request to the AI overview backend failed")
+            yield f"data: {json.dumps({'error': gettext('Could not generate an AI overview.')})}\n\n"
+
+    response = flask.Response(generate_sse(), mimetype="text/event-stream")
+    response.headers["Cache-Control"] = "no-cache, no-transform"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response
 
 
 @t.final
