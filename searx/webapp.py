@@ -1098,14 +1098,14 @@ def proxy_view():
 
     if not url or not h or not t:
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Invalid Request'),
             error_msg=gettext('Missing required proxy parameters.'),
         ), 400
 
     if not verify_proxy_token(settings['server']['secret_key'], url, h, t):
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Forbidden'),
             error_msg=gettext('Invalid or expired proxy signature. Only links from search results can be proxied.'),
         ), 403
@@ -1113,7 +1113,7 @@ def proxy_view():
     safe, err_msg = is_safe_url(url)
     if not safe:
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Forbidden'),
             error_msg=gettext('Access denied: ') + err_msg,
         ), 403
@@ -1123,7 +1123,7 @@ def proxy_view():
     toggle_js_url = url_for('proxy_view') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': new_js})
 
     return render(
-        'simple/proxy_view.html',
+        'proxy_view.html',
         target_url=url,
         page_url=page_url,
         js_enabled=(js == '1'),
@@ -1141,14 +1141,14 @@ def proxy_page():
 
     if not url or not h or not t:
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Invalid Request'),
             error_msg=gettext('Missing required proxy parameters.'),
         ), 400
 
     if not verify_proxy_token(settings['server']['secret_key'], url, h, t):
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Forbidden'),
             error_msg=gettext('Invalid or expired proxy signature. Only links from search results can be proxied.'),
         ), 403
@@ -1156,7 +1156,7 @@ def proxy_page():
     safe, err_msg = is_safe_url(url)
     if not safe:
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Forbidden'),
             error_msg=gettext('Access denied: ') + err_msg,
         ), 403
@@ -1197,7 +1197,7 @@ def proxy_page():
         if content_length and content_length.isdigit() and int(content_length) > maximum_size:
             close_stream()
             return render(
-                'simple/proxy_error.html',
+                'proxy_error.html',
                 error_title=gettext('Payload Too Large'),
                 error_msg=gettext('The requested resource exceeds the 5MB size limit.'),
             ), 413
@@ -1213,7 +1213,7 @@ def proxy_page():
                 if total_bytes > maximum_size:
                     close_stream()
                     return render(
-                        'simple/proxy_error.html',
+                        'proxy_error.html',
                         error_title=gettext('Payload Too Large'),
                         error_msg=gettext('The requested resource exceeds the 5MB size limit.'),
                     ), 413
@@ -1260,7 +1260,7 @@ def proxy_page():
         if not is_passthrough:
             close_stream()
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Gateway Timeout'),
             error_msg=gettext('The target server did not respond within 12 seconds.'),
         ), 504
@@ -1269,7 +1269,7 @@ def proxy_page():
             close_stream()
         logger.warning('Proxy connection error: %s', e)
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Bad Gateway'),
             error_msg=gettext('Could not connect to target server.'),
         ), 502
@@ -1278,7 +1278,7 @@ def proxy_page():
             close_stream()
         logger.exception('Proxy internal error: %s', e)
         return render(
-            'simple/proxy_error.html',
+            'proxy_error.html',
             error_title=gettext('Proxy Error'),
             error_msg=gettext('An unexpected error occurred while proxying the page.'),
         ), 500
