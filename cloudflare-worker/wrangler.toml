@@ -1,0 +1,7 @@
+name = "searxng-proxy"
+main = "worker.js"
+compatibility_date = "2024-04-01"
+
+# Environment variables
+# Set SEARXNG_SECRET via: npx wrangler secret put SEARXNG_SECRET
+[vars]

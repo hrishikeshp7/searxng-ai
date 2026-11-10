@@ -1241,7 +1241,12 @@ def proxy_view():
             error_msg=gettext('Access denied: ') + err_msg,
         ), 403
 
-    page_url = url_for('proxy_page') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': js})
+    proxy_worker_url = get_setting('server.proxy_worker_url')
+    if proxy_worker_url:
+        page_url = proxy_worker_url.rstrip('/') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': js})
+    else:
+        page_url = url_for('proxy_page') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': js})
+
     new_js = '0' if js == '1' else '1'
     toggle_js_url = url_for('proxy_view') + '?' + urlencode({'url': url, 'h': h, 't': t, 'js': new_js})
 
@@ -1257,6 +1262,10 @@ def proxy_view():
 @app.route('/proxy/page', methods=['GET'])
 def proxy_page():
     # pylint: disable=too-many-return-statements, too-many-branches, too-many-locals
+    proxy_worker_url = get_setting('server.proxy_worker_url')
+    if proxy_worker_url:
+        return redirect(proxy_worker_url.rstrip('/') + '?' + urlencode(sxng_request.args))
+
     url = sxng_request.args.get('url', '').strip()
     h = sxng_request.args.get('h', '')
     t = sxng_request.args.get('t', '')

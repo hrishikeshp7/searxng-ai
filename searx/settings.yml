@@ -111,6 +111,8 @@ server:
   open_in_proxy: true
   # Open in proxy by default. Is overwritten by ${SEARXNG_OPEN_IN_PROXY_DEFAULT}
   open_in_proxy_default: false
+  # Cloudflare Worker URL for proxying. Is overwritten by ${SEARXNG_PROXY_WORKER_URL}
+  proxy_worker_url: false
   proxy_max_html_size: 52428800    # 50 MB
   proxy_max_stream_size: 209715200 # 200 MB
   # 1.0 and 1.1 are supported
