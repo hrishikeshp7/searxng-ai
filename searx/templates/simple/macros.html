@@ -18,10 +18,11 @@
 {%- endmacro -%}
 
 <!-- Draw result thumbnail -->
-{% macro result_thumbnail(result, image_proxify) -%}
+{% macro result_thumbnail(result, image_proxify, target_url=None) -%}
+  {%- set dest_url = target_url or result.url -%}
   {%- if result.thumbnail -%}
   {%- set thumb_src = image_proxify(result.thumbnail) -%}
-  {{ result_open_link(result.url, classes='thumbnail_link') -}}
+  {{ result_open_link(dest_url, classes='thumbnail_link') -}}
   <img class="thumbnail_bg" src="{{ thumb_src }}" alt="" aria-hidden="true"><img class="thumbnail" src="{{ thumb_src }}" alt="" loading="lazy">{%- if result.length -%}<span class="thumbnail_length">{{ result.length }}</span>{%- endif -%}
   {{- result_close_link() -}}
   {%- endif -%}
@@ -29,10 +30,11 @@
 
 <!-- Draw result header -->
 {% macro result_header(result, favicons, image_proxify, thumbnail=True) -%}
+{%- set primary_url = web_proxify(result.url) if (proxy_default and open_in_proxy and result.url) else result.url -%}
 <article class="result {% if result['template'] %}result-{{ result.template|replace('.html', '') }}{% else %}result-default{% endif %} {% if result['category'] %}category-{{ result['category'] }}{% endif %}">
-  {%- if thumbnail %}{{ result_thumbnail(result, image_proxify) }}{% endif -%}
+  {%- if thumbnail %}{{ result_thumbnail(result, image_proxify, primary_url) }}{% endif -%}
   <div class="result_inner">
-  {{- result_open_link(result.url, "url_header") -}}
+  {{- result_open_link(primary_url, "url_header") -}}
   {%- if favicon_resolver != "" %}
   <div class="favicon"><img loading="lazy" src="{{ favicon_url(result.parsed_url.netloc) }}"></div>
   {%- endif -%}
@@ -42,7 +44,7 @@
     {%- endfor %}
   </div>
   {{- result_close_link() -}}
-  <h3>{{ result_link(result.url, result.title|safe) }}</h3>
+  <h3>{{ result_link(primary_url, result.title|safe) }}</h3>
 {%- endmacro -%}
 
 <!-- Draw result sub header -->
@@ -62,7 +64,11 @@
   {% for engine in result.engines %}<span>{{ engine }}</span>{% endfor %}
   {{ icon_small('ellipsis-vertical') + result_link(cache_url + result.url, _('cached'), "cache_link") }}
   {%- if open_in_proxy and result.url -%}
-  {{ icon_small('ellipsis-vertical') + result_link(web_proxify(result.url), _('open in proxy'), "proxy_link") }}
+    {%- if proxy_default -%}
+      {{ icon_small('ellipsis-vertical') + result_link(result.url, _('direct link'), "direct_link") }}
+    {%- else -%}
+      {{ icon_small('ellipsis-vertical') + result_link(web_proxify(result.url), _('open in proxy'), "proxy_link") }}
+    {%- endif -%}
   {%- endif -%}
 </div>{{- '' -}}
 <div class="break"></div>{{- '' -}}

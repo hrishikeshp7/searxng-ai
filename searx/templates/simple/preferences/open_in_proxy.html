@@ -14,3 +14,21 @@
     {{- _('Show "open in proxy" link in search results to view pages anonymously') -}}
   </div>{{- '' -}}
 </fieldset>{{- '' -}}
+{%- if 'open_in_proxy_default' not in locked_preferences -%}
+<fieldset>{{- '' -}}
+  <legend id="pref_open_in_proxy_default">{{ _('Open in proxy by default') }}</legend>{{- '' -}}
+  <p class="value">{{- '' -}}
+    <input type="checkbox" {{- ' ' -}}
+           name="open_in_proxy_default" {{- ' ' -}}
+           aria-labelledby="pref_open_in_proxy_default" {{- ' ' -}}
+           class="checkbox-onoff" {{- ' ' -}}
+           {%- if preferences.get_value('open_in_proxy_default') -%}
+             checked
+           {%- endif -%}{{- ' ' -}}
+           >{{- '' -}}
+  </p>{{- '' -}}
+  <div class="description">
+    {{- _('Open search result links via proxy by default (direct link remains available below each result)') -}}
+  </div>{{- '' -}}
+</fieldset>{{- '' -}}
+{%- endif -%}

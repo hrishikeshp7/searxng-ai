@@ -142,6 +142,29 @@
       .url-display { display: none; }
       .proxy-badge { display: none; }
     }
+    @media (max-width: 600px) {
+      #proxy-toolbar {
+        padding: 0 8px;
+        gap: 6px;
+      }
+      .proxy-brand span {
+        display: none;
+      }
+      .toolbar-actions {
+        gap: 5px;
+        flex-shrink: 0;
+      }
+      .btn {
+        padding: 5px 7px;
+        font-size: 11px;
+      }
+      .btn-direct span {
+        display: none;
+      }
+      .btn-close {
+        flex-shrink: 0;
+      }
+    }
   </style>
 </head>
 <body>
@@ -172,7 +195,7 @@
           <span>🛡️ JS: OFF</span>
         {% endif %}
       </a>
-      <a class="btn" href="{{ target_url }}" target="_blank" rel="noopener noreferrer" title="{{ _('Open original website directly in a new tab') }}">
+      <a class="btn btn-direct" href="{{ target_url }}" target="_blank" rel="noopener noreferrer" title="{{ _('Open original website directly in a new tab') }}">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
           <polyline points="15 3 21 3 21 9"/>

@@ -472,6 +472,7 @@ def render(template_name: str, **kwargs):
     kwargs['image_proxify'] = image_proxify
     kwargs['web_proxify'] = web_proxify
     kwargs['open_in_proxy'] = sxng_request.preferences.get_value('open_in_proxy')
+    kwargs['proxy_default'] = sxng_request.preferences.get_value('open_in_proxy_default')
     kwargs['favicon_url'] = favicons.favicon_url
     kwargs['cache_url'] = settings['ui']['cache_url']
     kwargs['get_result_template'] = get_result_template
