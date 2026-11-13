@@ -61,7 +61,7 @@ jobs:
             org.opencontainers.image.documentation=https://github.com/hrishikeshp7/searxng-ai#readme
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ./Dockerfile
