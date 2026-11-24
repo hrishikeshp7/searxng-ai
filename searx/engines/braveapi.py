@@ -24,6 +24,7 @@ Optional settings are:
 The API supports paging and time filters.
 """
 
+import os
 import typing as t
 
 from urllib.parse import urlencode
@@ -67,6 +68,9 @@ max_page = 10
 
 def setup(_: dict[str, t.Any]) -> bool | None:
     """Initialize the engine."""
+    global api_key
+    if not api_key:
+        api_key = os.environ.get("BRAVE_API_KEY", "") or os.environ.get("SEARXNG_BRAVE_API_KEY", "")
     if not api_key:
         raise SearxEngineAPIException("No API key provided")
 
@@ -98,6 +102,22 @@ def response(resp: "SXNG_Response") -> EngineResults:
     data = resp.json()
 
     res = EngineResults()
+
+    # Parse rich infobox if available (e.g. Wikipedia/definitions)
+    infobox_data = data.get("infobox") or {}
+    for info in infobox_data.get("results", []):
+        content = info.get("long_desc") or info.get("description")
+        if content and info.get("title"):
+            infobox: dict[str, t.Any] = {
+                "infobox": info["title"],
+                "content": content,
+                "urls": [{"title": info.get("title", ""), "url": info.get("url", "")}] if info.get("url") else [],
+            }
+            thumb = info.get("thumbnail") or {}
+            if thumb.get("src"):
+                infobox["img_src"] = thumb["src"]
+            res.add(infobox)
+
     results_json = (data.get("web") or {}).get("results", [])
     for result in results_json:
         res.add(parse_video_result(result))

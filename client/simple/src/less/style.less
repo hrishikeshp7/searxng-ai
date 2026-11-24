@@ -1432,6 +1432,7 @@ summary.title {
   align-items: center;
   font-size: 1em;
   color: var(--color-search-font);
+  z-index: 105;
 
   #ai-token-global {
     display: inline-flex;
@@ -1567,6 +1568,10 @@ summary.title {
     span {
       display: none;
     }
+
+    #ai-token-global span {
+      display: inline !important;
+    }
   }
 
   .page_with_header {
@@ -1664,6 +1669,10 @@ summary.title {
     span {
       display: none;
     }
+
+    #ai-token-global span {
+      display: inline !important;
+    }
   }
 }
 
@@ -1742,10 +1751,15 @@ summary.title {
   #links_on_top {
     top: 1.4rem;
     .ltr-right(10px);
+    z-index: 105;
 
     #ai-token-global {
       font-size: 0.7rem;
       padding: 0.15rem 0.35rem;
+
+      span {
+        display: inline !important;
+      }
 
       .ai-token-global-limit {
         display: none !important;

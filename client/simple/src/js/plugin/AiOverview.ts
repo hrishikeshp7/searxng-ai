@@ -248,9 +248,6 @@ export default class AiOverview extends Plugin {
   }
 
   private updateGlobalTokenCounter(stats?: { total: number; count: number; prompt: number; completion: number }): void {
-    const nav = document.querySelector<HTMLElement>("#links_on_top");
-    if (!nav) return;
-
     const currentStats = stats ?? this.getStoredTokenStats();
     if (currentStats.total <= 0) return;
 
@@ -258,54 +255,95 @@ export default class AiOverview extends Plugin {
     const pct = Math.min(100, Math.round((currentStats.total / dailyLimit) * 100));
     const remaining = Math.max(0, dailyLimit - currentStats.total);
 
-    let pill = document.querySelector<HTMLElement>("#ai-token-global");
-    if (!pill) {
-      pill = document.createElement("div");
-      pill.id = "ai-token-global";
-      nav.prepend(pill);
+    // 1. Update top nav badge (#links_on_top #ai-token-global) for desktop
+    const nav = document.querySelector<HTMLElement>("#links_on_top");
+    if (nav) {
+      let pill = document.querySelector<HTMLElement>("#ai-token-global");
+      if (!pill) {
+        pill = document.createElement("div");
+        pill.id = "ai-token-global";
+        nav.prepend(pill);
+      }
+
+      pill.className = "ai-token-global";
+      if (pct >= 95) {
+        pill.classList.add("danger");
+      } else if (pct >= 80) {
+        pill.classList.add("warning");
+      }
+
+      pill.title = [
+        `Today: ${currentStats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%)`,
+        `${remaining.toLocaleString()} tokens left · ${currentStats.count} search${currentStats.count === 1 ? "" : "es"}`
+      ].join("\n");
+
+      pill.innerHTML = "";
+
+      const icon = document.createElement("span");
+      icon.className = "ai-token-global-icon";
+      icon.textContent = "⚡";
+
+      const text = document.createElement("span");
+      text.className = "ai-token-global-text";
+
+      const count = document.createElement("span");
+      count.className = "ai-token-global-count";
+      count.textContent = this.formatK(currentStats.total);
+
+      const limit = document.createElement("span");
+      limit.className = "ai-token-global-limit";
+      limit.textContent = `/${this.formatK(dailyLimit)}`;
+
+      text.appendChild(count);
+      text.appendChild(limit);
+
+      pill.appendChild(icon);
+      pill.appendChild(text);
     }
 
-    pill.className = "ai-token-global";
-    if (pct >= 95) {
-      pill.classList.add("danger");
-    } else if (pct >= 80) {
-      pill.classList.add("warning");
+    // 2. Also update or create daily token badge in all AI overview headers (.ai-overview-actions)
+    // Ensures visibility on mobile screens where #links_on_top is hidden/obscured.
+    const overviewElements = document.querySelectorAll<HTMLElement>("[data-ai-overview]");
+    for (const el of overviewElements) {
+      const actions = el.querySelector<HTMLElement>(".ai-overview-actions");
+      if (!actions) continue;
+
+      let badge = actions.querySelector<HTMLElement>(".ai-overview-token-badge");
+      if (!badge) {
+        badge = document.createElement("div");
+        badge.className = "ai-overview-token-badge";
+        const icon = document.createElement("span");
+        icon.className = "token-icon";
+        icon.textContent = "⚡";
+
+        const text = document.createElement("span");
+        text.className = "token-text";
+        text.textContent = `${this.formatK(currentStats.total)} today`;
+
+        badge.appendChild(icon);
+        badge.appendChild(text);
+        actions.prepend(badge);
+      } else if (!badge.dataset.hasCurrent) {
+        const text = badge.querySelector<HTMLElement>(".token-text");
+        if (text) {
+          text.textContent = `${this.formatK(currentStats.total)} today`;
+        }
+      }
+
+      badge.title = `Today: ${currentStats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%)\n${remaining.toLocaleString()} tokens left · ${currentStats.count} search${currentStats.count === 1 ? "" : "es"}`;
+      if (pct >= 95) {
+        badge.classList.add("danger");
+      } else if (pct >= 80) {
+        badge.classList.add("warning");
+      }
     }
-
-    pill.title = [
-      `Today: ${currentStats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%)`,
-      `${remaining.toLocaleString()} tokens left · ${currentStats.count} search${currentStats.count === 1 ? "" : "es"}`
-    ].join("\n");
-
-    pill.innerHTML = "";
-
-    const icon = document.createElement("span");
-    icon.className = "ai-token-global-icon";
-    icon.textContent = "⚡";
-
-    const text = document.createElement("span");
-    text.className = "ai-token-global-text";
-
-    const count = document.createElement("span");
-    count.className = "ai-token-global-count";
-    count.textContent = this.formatK(currentStats.total);
-
-    const limit = document.createElement("span");
-    limit.className = "ai-token-global-limit";
-    limit.textContent = `/${this.formatK(dailyLimit)}`;
-
-    text.appendChild(count);
-    text.appendChild(limit);
-
-    pill.appendChild(icon);
-    pill.appendChild(text);
   }
 
   private setupTokenMonitor(element: HTMLElement, usage?: UsageItem): void {
     if (!usage?.total_tokens) return;
 
     const actions = element.querySelector<HTMLElement>(".ai-overview-actions");
-    if (!actions || actions.querySelector(".ai-overview-token-badge")) return;
+    if (!actions) return;
 
     const storageKey = "sxng_ai_token_stats";
     const stats = this.getStoredTokenStats();
@@ -325,10 +363,23 @@ export default class AiOverview extends Plugin {
       console.warn("[ai_overview] Failed to save token stats", e);
     }
 
-    // Badge inside AI overview: current search only
-    const badge = document.createElement("div");
-    badge.className = "ai-overview-token-badge";
-    badge.title = `Current overview: ${currentPrompt.toLocaleString()} in · ${currentCompletion.toLocaleString()} out (${currentTotal.toLocaleString()} tokens)`;
+    const dailyLimit = 200_000;
+    const pct = Math.min(100, Math.round((stats.total / dailyLimit) * 100));
+
+    // Badge inside AI overview: shows current query + today's total
+    let badge = actions.querySelector<HTMLElement>(".ai-overview-token-badge");
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.className = "ai-overview-token-badge";
+      actions.prepend(badge);
+    }
+    badge.innerHTML = "";
+    badge.dataset.hasCurrent = "true";
+
+    badge.title = [
+      `Current: ${currentPrompt.toLocaleString()} in · ${currentCompletion.toLocaleString()} out (${currentTotal.toLocaleString()} tokens)`,
+      `Today: ${stats.total.toLocaleString()} / ${dailyLimit.toLocaleString()} tokens (${pct}%)`
+    ].join("\n");
 
     const icon = document.createElement("span");
     icon.className = "token-icon";
@@ -336,11 +387,16 @@ export default class AiOverview extends Plugin {
 
     const text = document.createElement("span");
     text.className = "token-text";
-    text.textContent = `${this.formatK(currentTotal)} tokens`;
+    text.textContent = `${this.formatK(currentTotal)} · ${this.formatK(stats.total)} today`;
 
     badge.appendChild(icon);
     badge.appendChild(text);
-    actions.prepend(badge);
+
+    if (pct >= 95) {
+      badge.classList.add("danger");
+    } else if (pct >= 80) {
+      badge.classList.add("warning");
+    }
 
     // Global daily counter in the top-right nav
     this.updateGlobalTokenCounter(stats);

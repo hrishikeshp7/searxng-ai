@@ -684,6 +684,16 @@ class SXNGPlugin(Plugin):
 
         trigger_mode = get_setting("ai_overview.trigger_mode", "auto")
         is_nav = is_navigational_query(search.search_query.query)
-        auto_trigger = (trigger_mode != "manual") and not is_nav
+        has_infobox = bool(search.result_container.infoboxes)
+        has_answer = any(not isinstance(a, AIOverviewAnswer) for a in search.result_container.answers)
+
+        if trigger_mode == "always":
+            auto_trigger = True
+        elif trigger_mode == "manual":
+            auto_trigger = False
+        else:
+            # "auto" mode: don't auto-generate for navigational queries or when
+            # an instant answer/infobox (e.g. Wikipedia) already answers the query.
+            auto_trigger = not is_nav and not has_infobox and not has_answer
 
         return [AIOverviewAnswer(payload=payload_b64, sig=_sign(payload), auto_trigger=auto_trigger)]
