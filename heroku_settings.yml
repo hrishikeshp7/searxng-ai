@@ -67,8 +67,8 @@ engines:
 
   - name: brave
     engine: brave
-    inactive: true
-    shortcut: ""
+    disabled: true
+    shortcut: brw
 
   - name: brave.answers
     engine: brave_answers
