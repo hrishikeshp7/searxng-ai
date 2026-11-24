@@ -321,6 +321,7 @@ plugins:
 
 categories_as_tabs:
   general:
+  ai mode:
   images:
   # stock images:
   videos:
@@ -3312,6 +3313,13 @@ engines:
       use_official_api: false
       require_api_key: false
       results: HTML
+
+  - name: brave_answers
+    engine: brave_answers
+    categories: [ai mode]
+    shortcut: ai
+    timeout: 30.0
+    inactive: false
 
   - name: braveapi
     engine: braveapi

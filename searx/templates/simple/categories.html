@@ -1,5 +1,6 @@
 {% from 'simple/icons.html' import icon_big %}
 {%- set category_icons = {
+    "ai mode": "sparkles",
     "apps": "appstore",
     "blogs": "rss",
     "dictionaries": "book",
@@ -33,7 +34,7 @@
                     <input type="checkbox" id="checkbox_{{ category|replace(' ', '_') }}" name="category_{{ category }}"{% if category in selected_categories %} checked="checked"{% endif %}>
                     <label for="checkbox_{{ category|replace(' ', '_') }}" class="tooltips">
                         {{- icon_big(category_icons[category]) if category in category_icons  else icon_big('globe') -}}
-                        <div class="category_name">{{- _(category) -}}</div>
+                        <div class="category_name">{{- 'AI Mode' if category == 'ai mode' else _(category) -}}</div>
                     </label>
                 </div>
             {%- endfor -%}
@@ -42,7 +43,7 @@
             {%- for category in categories -%}{{- '\n' -}}
                 <button type="submit" name="category_{{ category }}" class="category category_button {% if category in selected_categories %}selected{% endif %}">
                     {{- icon_big(category_icons[category]) if category in category_icons else icon_big('globe') -}}
-                    <div class="category_name">{{- _(category) -}}</div>{{- '' -}}
+                    <div class="category_name">{{- 'AI Mode' if category == 'ai mode' else _(category) -}}</div>{{- '' -}}
                 </button>{{- '' -}}
             {%- endfor -%}
             <input name="categories" id="selected-categories" type="hidden" />

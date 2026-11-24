@@ -1,0 +1,25 @@
+{% from 'simple/icons.html' import icon_small %}
+<div class="ai-overview brave-answer-box">
+  <div class="ai-overview-header">
+    <h5>{{ icon_small('sparkles') }} {{ _('AI Mode') }} — {{ _('Brave Answer') }}</h5>
+  </div>
+  <div class="ai-overview-content-wrapper">
+    <div class="ai-overview-content">
+      {{ answer.html | safe }}
+    </div>
+  </div>
+  {% if answer.sources %}
+  <ul class="ai-overview-sources">
+    {% for src in answer.sources %}
+      <li>
+        <a href="{{ src.url }}" target="_blank" rel="noreferrer" class="ai-source-chip" title="{{ src.title }}">
+          <span class="ai-source-num">{{ loop.index }}</span>
+          {% if src.domain %}<span class="ai-source-domain">{{ src.domain }}</span>{% endif %}
+          <span class="ai-source-title">{{ src.title }}</span>
+        </a>
+      </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="ai-overview-disclaimer">{{ _('Grounded answer synthesized via Brave Answers API.') }}</p>
+</div>

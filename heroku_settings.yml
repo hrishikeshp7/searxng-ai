@@ -14,6 +14,13 @@
 
 use_default_settings: true
 
+categories_as_tabs:
+  general:
+  ai mode:
+  images:
+  videos:
+  news:
+
 plugins:
 
   searx.plugins.calculator.SXNGPlugin:
@@ -61,3 +68,10 @@ engines:
   - name: brave
     engine: brave
     disabled: true
+
+  - name: brave_answers
+    engine: brave_answers
+    categories: [ai mode]
+    inactive: false
+    shortcut: ai
+    timeout: 30.0
