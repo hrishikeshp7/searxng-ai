@@ -46,9 +46,13 @@ def setup(_: dict[str, t.Any]) -> bool | None:
     """Initialize the engine."""
     global api_key
     if not api_key:
-        api_key = os.environ.get("BRAVE_API_KEY", "") or os.environ.get("SEARXNG_BRAVE_API_KEY", "")
+        api_key = (
+            os.environ.get("BRAVE_ANSWERS_API_KEY", "")
+            or os.environ.get("BRAVE_API_KEY", "")
+            or os.environ.get("SEARXNG_BRAVE_API_KEY", "")
+        )
     if not api_key:
-        raise SearxEngineAPIException("No Brave API key provided (set BRAVE_API_KEY)")
+        raise SearxEngineAPIException("No Brave API key provided (set BRAVE_ANSWERS_API_KEY or BRAVE_API_KEY)")
 
 
 def request(query: str, params: "OnlineParams") -> None:
@@ -64,7 +68,6 @@ def request(query: str, params: "OnlineParams") -> None:
         "model": "brave",
         "messages": [{"role": "user", "content": query}],
         "stream": False,
-        "enable_citations": True,
     }
     params["data"] = json.dumps(payload).encode("utf-8")
 
