@@ -618,6 +618,8 @@ class SXNGPlugin(Plugin):
             search.search_query.pageno > 1
             or not search.search_query.query.strip()
             or request.form.get("format", "html") != "html"
+            or "ai mode" in search.search_query.categories
+            or any(getattr(a, "template", "") == "answer/brave_answer.html" for a in search.result_container.answers)
         ):
             return []
 
