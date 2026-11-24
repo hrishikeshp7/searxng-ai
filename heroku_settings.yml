@@ -67,9 +67,10 @@ engines:
 
   - name: brave
     engine: brave
-    disabled: true
+    inactive: true
+    shortcut: ""
 
-  - name: brave_answers
+  - name: brave.answers
     engine: brave_answers
     categories: [ai mode]
     inactive: false
